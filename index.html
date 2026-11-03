@@ -1,0 +1,307 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>
+<title>Welche Volleyball-Position bin ich</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Barlow:wght@400;600&display=swap">
+<style>
+  /* Layout: eine Karte in der Mitte, grosse Antwort-Knöpfe, oben der Fortschrittsbalken wie eine Spielfeldlinie */
+  :root {
+    --bg: #f3f6fb;
+    --surface: #ffffff;
+    --fg: #0f1f3d;
+    --muted: #51607f;
+    --line: #d5dcea;
+    --accent: #1d4fd8;
+    --on-accent: #ffffff;
+    --ball: #ffc72c;
+    --ball-ink: #3a2c00;
+    --display: "Barlow Condensed", "Arial Narrow", Impact, sans-serif;
+    --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1630; --surface: #14224a; --fg: #eef2fb; --muted: #a7b3d1;
+      --line: #2a3a6b; --accent: #5b8cff; --on-accent: #0b1630; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1630; --surface: #14224a; --fg: #eef2fb; --muted: #a7b3d1;
+    --line: #2a3a6b; --accent: #5b8cff; --on-accent: #0b1630; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.45;
+    padding-block: 20px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+  header { display: flex; align-items: center; gap: 12px; }
+  header svg { flex: none; width: 44px; height: 44px; }
+  h1, h2 {
+    font-family: var(--display);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h1 { font-size: 1.7rem; }
+  h2 { font-size: 2rem; }
+  .sub { color: var(--muted); font-size: 0.95rem; margin: 2px 0 0; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress > span { display: block; height: 100%; width: 0; background: var(--ball); transition: width .3s; }
+  .count { font-family: var(--display); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-size: .9rem; }
+  .question { font-size: 1.2rem; font-weight: 600; margin: 0; text-wrap: balance; }
+
+  .answers { display: flex; flex-direction: column; gap: 10px; }
+  button {
+    font: inherit;
+    cursor: pointer;
+    min-height: 56px;
+    border-radius: 12px;
+    border: 2px solid var(--line);
+    background: var(--surface);
+    color: var(--fg);
+    padding: 12px 16px;
+    text-align: left;
+  }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible { outline: 3px solid var(--ball); outline-offset: 2px; }
+  button.primary {
+    background: var(--accent); color: var(--on-accent); border-color: var(--accent);
+    font-family: var(--display); font-weight: 800; font-size: 1.2rem;
+    letter-spacing: .04em; text-transform: uppercase; text-align: center;
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .row button { flex: 1 1 180px; text-align: center; }
+
+  .badge {
+    align-self: flex-start;
+    background: var(--ball); color: var(--ball-ink);
+    font-family: var(--display); font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 999px; font-size: .95rem;
+  }
+  .result p { margin: 0; }
+  .traits { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
+  .traits li { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: .9rem; color: var(--muted); }
+  .bars { display: flex; flex-direction: column; gap: 8px; }
+  .bar { display: grid; grid-template-columns: minmax(0, 9.5em) 1fr; gap: 10px; align-items: center; font-size: .9rem; }
+  .bar .track { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--accent); }
+  .note { color: var(--muted); font-size: .9rem; min-height: 1.3em; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .progress > span { transition: none; } }
+</style>
+
+<main>
+  <header>
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="21" fill="var(--ball)" stroke="var(--ball-ink)" stroke-width="2"/>
+      <path d="M24 3c-4 8-4 16 0 21s4 13 0 21" fill="none" stroke="var(--ball-ink)" stroke-width="2"/>
+      <path d="M5 15c9 1 15 5 19 9s10 8 19 9" fill="none" stroke="var(--ball-ink)" stroke-width="2"/>
+      <path d="M5 33c9-1 15-5 19-9s10-8 19-9" fill="none" stroke="var(--ball-ink)" stroke-width="2"/>
+    </svg>
+    <div>
+      <h1>Welche Position bist du?</h1>
+      <p class="sub">Das Volleyball-Quiz in 6 Fragen</p>
+    </div>
+  </header>
+  <div id="app"></div>
+</main>
+
+<script>
+  // ===== HIER KANNST DU DAS QUIZ ÄNDERN =====
+  // Jede Antwort gibt einer Position einen Punkt.
+  const POSITIONS = {
+    zuspiel: {
+      name: "Zuspielerin",
+      text: "Du behältst den Überblick und machst die anderen besser. Als Zuspielerin entscheidest du in Sekunden, wer den Ball bekommt. Dein Team verlässt sich auf deinen Kopf.",
+      traits: ["Überblick", "Ruhe", "Teamplayerin"]
+    },
+    libera: {
+      name: "Libera",
+      text: "Kein Ball ist für dich verloren. Du bist schnell, mutig und holst Bälle, die alle schon aufgegeben haben. Dein Team liebt deine Energie.",
+      traits: ["Reflexe", "Mut", "Stimmungsmacherin"]
+    },
+    aussen: {
+      name: "Aussenangreiferin",
+      text: "Du kannst fast alles: annehmen, angreifen, abwehren. Wenn es eng wird, bekommst du den Ball. Du bist vielseitig und gibst nie auf.",
+      traits: ["Vielseitig", "Ausdauer", "Nervenstark"]
+    },
+    mitte: {
+      name: "Mittelblockerin",
+      text: "Am Netz bist du die Mauer. Du liest das Spiel, stehst im richtigen Moment am richtigen Ort und sorgst mit einem Block für Applaus.",
+      traits: ["Timing", "Netzspielerin", "Mauer"]
+    },
+    diagonal: {
+      name: "Diagonalangreiferin",
+      text: "Du bist die Punktemaschine. Mit Kraft und Mut schlägst du Bälle durch jede Abwehr und bist am gefährlichsten, wenn es um alles geht.",
+      traits: ["Power", "Mut", "Punkte holen"]
+    }
+  };
+
+  const QUESTIONS = [
+    { q: "Dein Team liegt im Entscheidungssatz zurück. Was machst du?", a: [
+      ["Ich behalte den Überblick und verteile die Bälle neu.", "zuspiel"],
+      ["Ich werfe mich in jeden einzelnen Ball.", "libera"],
+      ["Ich sage: Gebt mir den Ball!", "aussen"],
+      ["Ich konzentriere mich darauf, den nächsten Angriff zu blocken.", "mitte"],
+      ["Ich hole mir die nächsten Punkte mit voller Power.", "diagonal"]
+    ]},
+    { q: "Was machst du im Training am liebsten?", a: [
+      ["Spielzüge und Taktik üben.", "zuspiel"],
+      ["Abwehr und Annahme.", "libera"],
+      ["Alles ein bisschen, Hauptsache Abwechslung.", "aussen"],
+      ["Blocktraining am Netz.", "mitte"],
+      ["Angriffe und Aufschläge.", "diagonal"]
+    ]},
+    { q: "Welche Eigenschaft passt am besten zu dir?", a: [
+      ["Ruhig und denkt voraus.", "zuspiel"],
+      ["Zäh und blitzschnell.", "libera"],
+      ["Vielseitig und ausdauernd.", "aussen"],
+      ["Gutes Timing und schnell auf den Füssen.", "mitte"],
+      ["Mutig und kraftvoll.", "diagonal"]
+    ]},
+    { q: "Welche Rolle hast du in deinem Freundeskreis?", a: [
+      ["Ich organisiere und habe den Plan.", "zuspiel"],
+      ["Ich sorge für gute Laune.", "libera"],
+      ["Ich bin überall dabei und helfe, wo es nötig ist.", "aussen"],
+      ["Ich schaue, dass nichts schiefgeht.", "mitte"],
+      ["Ich bringe das grosse Highlight.", "diagonal"]
+    ]},
+    { q: "Welcher Moment im Spiel ist dein liebster?", a: [
+      ["Ein perfekter Pass, der den Punkt vorbereitet.", "zuspiel"],
+      ["Eine unmögliche Abwehr.", "libera"],
+      ["Ein langer Ballwechsel, den wir gewinnen.", "aussen"],
+      ["Ein Block, der den Ball zu Boden schickt.", "mitte"],
+      ["Ein Ass oder ein Hammer-Angriff.", "diagonal"]
+    ]},
+    { q: "Du planst eine Party. Was ist deine Aufgabe?", a: [
+      ["Ablauf und Einladungen organisieren.", "zuspiel"],
+      ["Alle Gäste unterhalten.", "libera"],
+      ["Einspringen, wo gerade Hilfe fehlt.", "aussen"],
+      ["Aufpassen, dass alles klappt.", "mitte"],
+      ["Die Überraschung oder das Highlight liefern.", "diagonal"]
+    ]}
+  ];
+  // ===== ENDE =====
+
+  const app = document.getElementById("app");
+  let step = 0, picks = [];
+
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  };
+  const shuffle = (arr) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  function showStart() {
+    app.replaceChildren();
+    const card = el("div", "card");
+    card.append(
+      el("h2", "", "Bist du Zuspielerin, Libera oder Angreiferin?"),
+      el("p", "", "Beantworte 6 kurze Fragen und finde heraus, welche Position im Volleyball am besten zu dir passt."),
+    );
+    const start = el("button", "primary", "Los geht's");
+    start.onclick = () => { step = 0; picks = []; showQuestion(); };
+    card.append(start);
+    app.append(card);
+  }
+
+  function showQuestion() {
+    app.replaceChildren();
+    const item = QUESTIONS[step];
+    const card = el("div", "card");
+    const bar = el("div", "progress");
+    const fill = el("span");
+    fill.style.width = (step / QUESTIONS.length * 100) + "%";
+    bar.append(fill);
+    card.append(el("div", "count", "Frage " + (step + 1) + " von " + QUESTIONS.length), bar, el("p", "question", item.q));
+    const list = el("div", "answers");
+    shuffle(item.a).forEach(([label, pos]) => {
+      const b = el("button", "", label);
+      b.onclick = () => {
+        picks.push(pos);
+        step++;
+        step < QUESTIONS.length ? showQuestion() : showResult();
+      };
+      list.append(b);
+    });
+    card.append(list);
+    app.append(card);
+  }
+
+  function showResult() {
+    app.replaceChildren();
+    const score = {};
+    Object.keys(POSITIONS).forEach((k) => (score[k] = 0));
+    picks.forEach((p) => score[p]++);
+    const max = Math.max(...Object.values(score));
+    // Bei Gleichstand gewinnt die Position, die zuletzt gewählt wurde
+    let winner = null;
+    for (let i = picks.length - 1; i >= 0; i--) {
+      if (score[picks[i]] === max) { winner = picks[i]; break; }
+    }
+    const pos = POSITIONS[winner];
+
+    const card = el("div", "card result");
+    card.append(el("span", "badge", "Dein Ergebnis"), el("h2", "", pos.name), el("p", "", pos.text));
+    const traits = el("ul", "traits");
+    pos.traits.forEach((t) => traits.append(el("li", "", t)));
+    card.append(traits);
+
+    const bars = el("div", "bars");
+    Object.keys(POSITIONS).sort((a, b) => score[b] - score[a]).forEach((k) => {
+      const r = el("div", "bar");
+      const track = el("div", "track");
+      const f = el("div", "fill");
+      f.style.width = (score[k] / QUESTIONS.length * 100) + "%";
+      track.append(f);
+      r.append(el("span", "", POSITIONS[k].name), track);
+      bars.append(r);
+    });
+    card.append(bars);
+
+    const note = el("p", "note");
+    note.setAttribute("aria-live", "polite");
+    const row = el("div", "row");
+    const share = el("button", "", "Ergebnis kopieren");
+    share.onclick = async () => {
+      const msg = "Ich bin " + pos.name + "! Welche Volleyball-Position bist du?";
+      try { await navigator.clipboard.writeText(msg); note.textContent = "Kopiert. Du kannst es jetzt einfügen."; }
+      catch (e) { note.textContent = msg; }
+    };
+    const again = el("button", "primary", "Nochmal spielen");
+    again.onclick = showStart;
+    row.append(share, again);
+    card.append(row, note);
+    app.append(card);
+  }
+
+  showStart();
+</script>
+</body></html>
