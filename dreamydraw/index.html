@@ -381,6 +381,24 @@
     height: 100%;
     touch-action: none; /* verhindert, dass die Seite beim Zeichnen scrollt */
     cursor: crosshair;
+    transform-origin: 0 0; /* beim Zoomen von oben links aus rechnen */
+  }
+
+  /* Der Knopf, der den Zoom wieder auf 100 % stellt */
+  .zoom-zurueck {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-family: var(--schrift-titel);
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--papier);
+    border: 2px solid var(--violett);
+    border-radius: 99px;
+    padding: 4px 12px;
+    box-shadow: 0 1px 4px rgba(75, 63, 55, 0.2);
+    cursor: pointer;
   }
   #hintergrund-ebene { pointer-events: none; }
 
@@ -500,6 +518,7 @@
 <main class="blatt">
   <canvas id="hintergrund-ebene"></canvas>
   <canvas id="zeichenflaeche"></canvas>
+  <button class="zoom-zurueck" id="zoom-zurueck" type="button" hidden>🔍 100 %</button>
 
   <!-- Das Vorlagen-Fenster: die Kacheln werden im JavaScript eingefüllt -->
   <div class="vorlagenpanel" id="vorlagenpanel" hidden>
@@ -1249,7 +1268,8 @@
   // machen wir das Blatt intern grösser (mal "pixelDichte").
   function blattAnpassen() {
     const pixelDichte = window.devicePixelRatio || 1;
-    const groesse = canvas.getBoundingClientRect();
+    // clientWidth/-Height: die echte Grösse, ohne den Zoom mitzurechnen
+    const groesse = { width: canvas.clientWidth, height: canvas.clientHeight };
     const neueBreite = Math.round(groesse.width * pixelDichte);
     const neueHoehe = Math.round(groesse.height * pixelDichte);
     // Noch unsichtbar oder gleich gross? Dann gibt es nichts zu tun
@@ -1308,15 +1328,25 @@
 
   // Rechnet aus, wo genau auf dem Blatt der Finger ist
   function position(ereignis) {
+    // Beim Zoomen ist das Blatt auf dem Bildschirm grösser als in echt,
+    // darum rechnen wir auf die echte Blattgrösse zurück
     const groesse = canvas.getBoundingClientRect();
     return {
-      x: ereignis.clientX - groesse.left,
-      y: ereignis.clientY - groesse.top
+      x: (ereignis.clientX - groesse.left) * breite / groesse.width,
+      y: (ereignis.clientY - groesse.top) * hoehe / groesse.height
     };
   }
 
   // Finger berührt das Blatt: neue Linie beginnen
   canvas.addEventListener("pointerdown", (ereignis) => {
+    // Zwei Finger auf dem Blatt: zoomen statt zeichnen (Teil 3c).
+    // Der erste Finger einer neuen Berührung räumt alte Finger-Reste weg.
+    if (ereignis.isPrimary) finger.clear();
+    finger.set(ereignis.pointerId, { x: ereignis.clientX, y: ereignis.clientY });
+    if (finger.size >= 2) {
+      zoomBeginnen();
+      return;
+    }
     // Im Text-Modus schreiben wir statt zu zeichnen
     if (textModus) {
       textSchreiben(position(ereignis));
@@ -1328,7 +1358,7 @@
       return;
     }
     zeichneGerade = true;
-    canvas.setPointerCapture(ereignis.pointerId);
+    try { canvas.setPointerCapture(ereignis.pointerId); } catch (fehler) {}
     merken(); // Foto machen, bevor die neue Linie dazukommt
     leuchtenSetzen();
     const p = position(ereignis);
@@ -1343,6 +1373,13 @@
 
   // Finger bewegt sich: Linie weiterzeichnen
   canvas.addEventListener("pointermove", (ereignis) => {
+    if (finger.has(ereignis.pointerId)) {
+      finger.set(ereignis.pointerId, { x: ereignis.clientX, y: ereignis.clientY });
+    }
+    if (zoomStart) {
+      zoomWeiter();
+      return;
+    }
     if (!zeichneGerade) return;
     // Immer nur das neue Stückchen zeichnen, vom letzten Punkt bis hierher
     const p = position(ereignis);
@@ -1363,8 +1400,98 @@
     clearTimeout(halteUhr);
     pinsel.shadowBlur = 0;
   }
-  canvas.addEventListener("pointerup", aufhoeren);
-  canvas.addEventListener("pointercancel", aufhoeren);
+  function fingerWeg(ereignis) {
+    finger.delete(ereignis.pointerId);
+    if (finger.size < 2) zoomStart = null;
+    aufhoeren();
+  }
+  canvas.addEventListener("pointerup", fingerWeg);
+  canvas.addEventListener("pointercancel", fingerWeg);
+
+  // ===== 3c. Zoomen =====
+  // Zwei Finger auseinanderziehen = näher heran, zusammenschieben = weiter weg.
+  // Mit zwei Fingern kann man das Blatt auch verschieben.
+  // Am Computer geht es mit Ctrl + Mausrad oder mit zwei Fingern auf dem Trackpad.
+  const finger = new Map();  // welche Finger gerade auf dem Blatt sind
+  let zoom = 1;              // 1 = normal, 2 = doppelt so gross ...
+  let verschiebungX = 0;
+  let verschiebungY = 0;
+  let zoomStart = null;      // wie es war, als die zwei Finger kamen
+  const zoomKnopf = document.getElementById("zoom-zurueck");
+
+  function zoomZeigen() {
+    // Nicht kleiner als das Blatt und nicht neben das Blatt schieben
+    zoom = Math.min(5, Math.max(1, zoom));
+    verschiebungX = Math.min(0, Math.max(breite * (1 - zoom), verschiebungX));
+    verschiebungY = Math.min(0, Math.max(hoehe * (1 - zoom), verschiebungY));
+    const umformen = `translate(${verschiebungX}px, ${verschiebungY}px) scale(${zoom})`;
+    canvas.style.transform = umformen;
+    hgCanvas.style.transform = umformen;
+    zoomKnopf.hidden = zoom < 1.01;
+  }
+
+  // Mitte und Abstand der zwei Finger, gemessen im Blatt-Rahmen
+  function zweiFinger() {
+    const [a, b] = [...finger.values()];
+    const rahmen = canvas.parentElement.getBoundingClientRect();
+    return {
+      mitte: { x: (a.x + b.x) / 2 - rahmen.left, y: (a.y + b.y) / 2 - rahmen.top },
+      abstand: Math.max(1, abstand(a, b))
+    };
+  }
+
+  function zoomBeginnen() {
+    // Hat der erste Finger schon ein Stück gezeichnet? Das wieder wegnehmen.
+    if (zeichneGerade) {
+      zeichneGerade = false;
+      clearTimeout(halteUhr);
+      pinsel.shadowBlur = 0;
+      const vorher = verlauf.pop();
+      if (vorher) pinsel.putImageData(vorher.bild, 0, 0);
+    }
+    zoomStart = { ...zweiFinger(), zoom, verschiebungX, verschiebungY };
+  }
+
+  function zoomWeiter() {
+    if (finger.size < 2) return;
+    const jetzt = zweiFinger();
+    // Der Punkt auf dem Blatt, der am Anfang zwischen den Fingern lag ...
+    const blattX = (zoomStart.mitte.x - zoomStart.verschiebungX) / zoomStart.zoom;
+    const blattY = (zoomStart.mitte.y - zoomStart.verschiebungY) / zoomStart.zoom;
+    zoom = zoomStart.zoom * jetzt.abstand / zoomStart.abstand;
+    zoom = Math.min(5, Math.max(1, zoom));
+    // ... bleibt auch jetzt zwischen den Fingern
+    verschiebungX = jetzt.mitte.x - blattX * zoom;
+    verschiebungY = jetzt.mitte.y - blattY * zoom;
+    zoomZeigen();
+  }
+
+  // Ctrl + Mausrad oder Trackpad am Computer
+  canvas.addEventListener("wheel", (ereignis) => {
+    ereignis.preventDefault();
+    const rahmen = canvas.parentElement.getBoundingClientRect();
+    const mx = ereignis.clientX - rahmen.left;
+    const my = ereignis.clientY - rahmen.top;
+    if (ereignis.ctrlKey) {
+      const blattX = (mx - verschiebungX) / zoom;
+      const blattY = (my - verschiebungY) / zoom;
+      zoom *= Math.exp(-ereignis.deltaY * 0.01);
+      zoom = Math.min(5, Math.max(1, zoom));
+      verschiebungX = mx - blattX * zoom;
+      verschiebungY = my - blattY * zoom;
+    } else {
+      verschiebungX -= ereignis.deltaX;
+      verschiebungY -= ereignis.deltaY;
+    }
+    zoomZeigen();
+  }, { passive: false });
+
+  zoomKnopf.addEventListener("click", () => {
+    zoom = 1;
+    verschiebungX = 0;
+    verschiebungY = 0;
+    zoomZeigen();
+  });
 
   // ===== 3b. Perfekte Formen =====
   // Zeichne eine Form und lass den Finger am Ende kurz still liegen:
