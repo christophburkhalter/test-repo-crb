@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Caveat:wght@600&family=Pacifico&family=Nunito:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Caveat:wght@600&family=Pacifico&family=Nunito:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap">
 
 <style>
   /* Layout: eine App über den ganzen Bildschirm – oben der Name, in der Mitte das Blatt, unten die Knöpfe */
@@ -714,19 +714,37 @@
     };
   }
 
-  function schreiben(ctx, w, text, x, y, groesse, schrift, ausrichtung = "center") {
-    ctx.font = `${groesse}px "${schrift}"`;
-    ctx.fillStyle = tinte;
-    ctx.textAlign = ausrichtung;
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, x, y, w * 0.9); // nie breiter als das Blatt
-  }
+  // Kräftige Farbe Nummer 0–6 aus dem aktiven Style (0 violett, 1 blau,
+  // 2 grün, 3 gelb, 4 orange, 5 rot, 6 pink) und die dunkle Schriftfarbe
+  function akzent(nummer) { return stil.zeichnen[nummer].wert; }
+  function dunkel() { return stil.design.text; }
 
-  function emojiMalen(ctx, emoji, x, y, groesse) {
-    ctx.font = `${groesse}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-    ctx.textAlign = "center";
+  // Schreibt Text. "wie" sagt, wie er aussehen soll, z.B. { kursiv: true }.
+  // "sperrung" macht Luft zwischen den Buchstaben, wie bei E I N L A D U N G.
+  function satz(ctx, w, text, x, y, groesse, wie = {}) {
+    const {
+      schrift = "Playfair Display", farbe = dunkel(), kursiv = false,
+      gewicht = 400, ausrichtung = "center", sperrung = 0
+    } = wie;
+    const ersatz = schrift === "Playfair Display" ? "Georgia, serif" : "sans-serif";
+    ctx.font = `${kursiv ? "italic " : ""}${gewicht} ${groesse}px "${schrift}", ${ersatz}`;
+    ctx.fillStyle = farbe;
     ctx.textBaseline = "middle";
-    ctx.fillText(emoji, x, y);
+    if (!sperrung) {
+      ctx.textAlign = ausrichtung;
+      ctx.fillText(text, x, y, w * 0.86); // nie breiter als der Rahmen
+      return;
+    }
+    // Buchstabe für Buchstabe, mit etwas Luft dazwischen
+    const luft = groesse * sperrung;
+    const zeichen = [...text];
+    const gesamt = zeichen.reduce((summe, z) => summe + ctx.measureText(z).width, 0) + luft * (zeichen.length - 1);
+    let links = ausrichtung === "center" ? x - gesamt / 2 : ausrichtung === "right" ? x - gesamt : x;
+    ctx.textAlign = "left";
+    zeichen.forEach((z) => {
+      ctx.fillText(z, links, y);
+      links += ctx.measureText(z).width + luft;
+    });
   }
 
   function linie(ctx, x1, y1, x2, y2, farbe, dicke) {
@@ -748,14 +766,137 @@
     });
   }
 
-  // Zeilen zum Ausfüllen, z.B. "Wann: ________"
-  function ausfuellZeilen(ctx, w, h, woerter, startY) {
+  // Eine Linie, die man durchscheinen lassen kann (deckkraft 0 bis 1)
+  function feineLinie(ctx, x1, y1, x2, y2, farbe, dicke, deckkraft = 1) {
+    ctx.save();
+    ctx.globalAlpha = deckkraft;
+    linie(ctx, x1, y1, x2, y2, farbe, dicke);
+    ctx.restore();
+  }
+
+  // Ein feiner Doppelrahmen, wie bei einer gedruckten Karte
+  function rahmen(ctx, w, h, farbe) {
+    const s = Math.min(w, h);
+    const dicke = Math.max(0.5, s * 0.003);
+    const aussen = s * 0.035;
+    const innen = aussen + s * 0.014;
+    ctx.save();
+    ctx.strokeStyle = farbe;
+    ctx.lineWidth = dicke;
+    ctx.strokeRect(aussen, aussen, w - 2 * aussen, h - 2 * aussen);
+    ctx.lineWidth = dicke * 0.6;
+    ctx.strokeRect(innen, innen, w - 2 * innen, h - 2 * innen);
+    ctx.restore();
+  }
+
+  // Zwei kurze Linien mit einer kleinen Raute in der Mitte: ——◆——
+  function trenner(ctx, w, y, farbe) {
+    const dicke = Math.max(0.5, w * 0.003);
+    linie(ctx, w * 0.3, y, w * 0.46, y, farbe, dicke);
+    linie(ctx, w * 0.54, y, w * 0.7, y, farbe, dicke);
+    const r = w * 0.014;
+    ctx.fillStyle = farbe;
+    ctx.beginPath();
+    ctx.moveTo(w / 2, y - r);
+    ctx.lineTo(w / 2 + r, y);
+    ctx.lineTo(w / 2, y + r);
+    ctx.lineTo(w / 2 - r, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Zeilen zum Ausfüllen: links ein Wort wie DATUM, rechts eine Linie
+  function infoZeilen(ctx, w, h, woerter, startY, schritt, farbe) {
     const s = Math.min(w, h);
     woerter.forEach((wort, i) => {
-      const y = h * (startY + i * 0.09);
-      schreiben(ctx, w, wort, w * 0.1, y, s * 0.065, "Fredoka", "left");
-      linie(ctx, w * 0.32, y + s * 0.035, w * 0.9, y + s * 0.035, "rgba(74, 63, 92, 0.4)", Math.max(1, s * 0.005));
+      const y = h * (startY + i * schritt);
+      satz(ctx, w, wort.toUpperCase(), w * 0.16, y, s * 0.03,
+        { schrift: "Nunito", gewicht: 700, farbe, ausrichtung: "left", sperrung: 0.18 });
+      feineLinie(ctx, w * 0.42, y + s * 0.015, w * 0.84, y + s * 0.015, dunkel(), Math.max(0.5, s * 0.003), 0.35);
     });
+  }
+
+  // Leere Zeilen für eine persönliche Nachricht
+  function schreibZeilen(ctx, w, h, anzahl, startY, schritt, farbe = dunkel()) {
+    const s = Math.min(w, h);
+    for (let i = 0; i < anzahl; i++) {
+      const y = h * (startY + i * schritt);
+      feineLinie(ctx, w * 0.18, y, w * 0.82, y, farbe, Math.max(0.5, s * 0.003), 0.3);
+    }
+  }
+
+  // Ein Kreis, gefüllt oder nur als Umriss
+  function kreis(ctx, x, y, r, farbe, nurUmriss = false, dicke = 1) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    if (nurUmriss) {
+      ctx.strokeStyle = farbe;
+      ctx.lineWidth = dicke;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = farbe;
+      ctx.fill();
+    }
+  }
+
+  // "Zufall", der jedes Mal gleich ist: so sieht die Vorschau
+  // genau gleich aus wie die Vorlage auf dem grossen Blatt
+  function zufall(startwert) {
+    let z = startwert;
+    return () => {
+      z = (z * 9301 + 49297) % 233280;
+      return z / 233280;
+    };
+  }
+
+  // Ein Feuerwerk: Strahlen rund um einen Punkt
+  function feuerwerk(ctx, x, y, r, farbe, dicke) {
+    for (let i = 0; i < 16; i++) {
+      const winkel = (i / 16) * Math.PI * 2;
+      const cos = Math.cos(winkel);
+      const sin = Math.sin(winkel);
+      linie(ctx, x + cos * r * 0.3, y + sin * r * 0.3, x + cos * r * 0.85, y + sin * r * 0.85, farbe, dicke);
+      kreis(ctx, x + cos * r, y + sin * r, dicke * 1.2, farbe);
+    }
+  }
+
+  // Ein Zweig mit Blättern links und rechts
+  function zweig(ctx, x, y, laenge, winkel, stielFarbe, blattFarbe, dicke) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(winkel);
+    linie(ctx, 0, 0, laenge, 0, stielFarbe, dicke);
+    for (let i = 1; i <= 5; i++) {
+      const pos = laenge * (i / 6);
+      const groesse = laenge * 0.13 * (1 - i * 0.08);
+      [-1, 1].forEach((seite) => {
+        ctx.save();
+        ctx.translate(pos, 0);
+        ctx.rotate(seite * -0.7);
+        ctx.beginPath();
+        ctx.ellipse(groesse, 0, groesse, groesse * 0.42, 0, 0, Math.PI * 2);
+        ctx.fillStyle = blattFarbe;
+        ctx.fill();
+        ctx.strokeStyle = stielFarbe;
+        ctx.lineWidth = dicke * 0.6;
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+    ctx.restore();
+  }
+
+  // Ein Stern mit 5 Zacken
+  function stern(ctx, x, y, r, farbe) {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const winkel = -Math.PI / 2 + (i * Math.PI) / 5;
+      const abstand = i % 2 ? r * 0.45 : r;
+      ctx.lineTo(x + Math.cos(winkel) * abstand, y + Math.sin(winkel) * abstand);
+    }
+    ctx.closePath();
+    ctx.fillStyle = farbe;
+    ctx.fill();
   }
 
   // --- Die Hintergründe ---
@@ -825,117 +966,247 @@
     }
   ];
 
-  // --- Die Vorlagen ---
-  // Jede Vorlage hat einen Hintergrund und "Elemente" (Text und Sticker).
-  // Die Elemente landen auf deiner Zeichnung: du kannst sie also radieren!
+  // --- Die Vorlagen: Flyer für verschiedene Anlässe ---
+  // Jede Vorlage hat einen Hintergrund (Rahmen, Formen, Zeilen zum Ausfüllen)
+  // und "Elemente" (die Texte). Die Texte landen auf deiner Zeichnung,
+  // du kannst sie also radieren und durch eigene ersetzen.
+  // Alle Farben kommen aus dem aktiven Farb-Style.
+  const papierFarbe = "#FFFDF9";
+
   const vorlagen = [
     {
-      name: "Postkarte",
+      name: "Geburtstag",
       hintergrund: (ctx, w, h) => {
-        einfarbig("#FFFDF6")(ctx, w, h);
         const s = Math.min(w, h);
-        linie(ctx, w * 0.06, h * 0.55, w * 0.94, h * 0.55, hell.violett, 2);
-        // Briefmarke
-        ctx.setLineDash([s * 0.02, s * 0.015]);
-        ctx.strokeStyle = hell.rot;
-        ctx.lineWidth = 2;
-        ctx.strokeRect(w * 0.92 - s * 0.22, h * 0.6, s * 0.22, s * 0.27);
-        ctx.setLineDash([]);
-        emojiMalen(ctx, "🌸", w * 0.92 - s * 0.11, h * 0.6 + s * 0.135, s * 0.12);
-        // Zeilen für die Adresse
+        einfarbig(papierFarbe)(ctx, w, h);
+        ctx.fillStyle = hell.pink;
+        ctx.fillRect(0, 0, w, h * 0.44);
+        // Grosse, weiche Kreise wie Ballons
+        ctx.save();
+        ctx.globalAlpha = 0.8;
+        kreis(ctx, w * 0.22, h * 0.16, s * 0.16, hell.orange);
+        kreis(ctx, w * 0.8, h * 0.12, s * 0.11, hell.violett);
+        kreis(ctx, w * 0.62, h * 0.32, s * 0.17, hell.gelb);
+        kreis(ctx, w * 0.12, h * 0.38, s * 0.08, hell.blau);
+        ctx.restore();
+        kreis(ctx, w * 0.42, h * 0.24, s * 0.09, akzent(6), true, Math.max(0.5, s * 0.004));
+        rahmen(ctx, w, h, akzent(6));
+        infoZeilen(ctx, w, h, ["Datum", "Zeit", "Ort"], 0.74, 0.07, akzent(6));
+      },
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        satz(ctx, w, "EINLADUNG ZUM", w / 2, h * 0.52, s * 0.034,
+          { schrift: "Nunito", gewicht: 700, farbe: akzent(6), sperrung: 0.25 });
+        satz(ctx, w, "Geburtstagsfest", w / 2, h * 0.6, s * 0.105, { kursiv: true });
+        trenner(ctx, w, h * 0.665, akzent(6));
+        satz(ctx, w, "Wir freuen uns auf dich", w / 2, h * 0.935, s * 0.042, { kursiv: true });
+      }
+    },
+    {
+      name: "Weihnachten",
+      hintergrund: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        const dicke = Math.max(0.6, s * 0.006);
+        einfarbig(dunkel())(ctx, w, h);
+        // Leiser Schnee
+        const zz = zufall(7);
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        for (let i = 0; i < 45; i++) kreis(ctx, w * zz(), h * zz() * 0.55, s * (0.004 + zz() * 0.006), "#FFFFFF");
+        ctx.restore();
+        // Ein schlichter Tannenbaum aus drei Dreiecken
+        ctx.strokeStyle = hell.gruen;
+        ctx.lineWidth = dicke;
+        ctx.lineJoin = "round";
         for (let i = 0; i < 3; i++) {
-          const y = h * (0.74 + i * 0.08);
-          linie(ctx, w * 0.06, y, w * 0.6, y, hell.blau, 2);
+          const spitze = h * (0.12 + i * 0.09);
+          const boden = spitze + h * 0.15;
+          const halb = w * (0.1 + i * 0.05);
+          ctx.beginPath();
+          ctx.moveTo(w / 2, spitze);
+          ctx.lineTo(w / 2 + halb, boden);
+          ctx.lineTo(w / 2 - halb, boden);
+          ctx.closePath();
+          ctx.stroke();
         }
+        linie(ctx, w / 2, h * 0.45, w / 2, h * 0.49, hell.gruen, dicke);
+        stern(ctx, w / 2, h * 0.11, s * 0.04, hell.gelb);
+        [[0.47, 0.24, "rot"], [0.55, 0.3, "gelb"], [0.42, 0.37, "gelb"], [0.58, 0.41, "rot"], [0.5, 0.35, "pink"]]
+          .forEach(([x, y, farbe]) => kreis(ctx, w * x, h * y, s * 0.012, hell[farbe]));
+        rahmen(ctx, w, h, hell.gelb);
+        schreibZeilen(ctx, w, h, 2, 0.85, 0.065, "#FFFFFF");
       },
-      elemente: null
-    },
-    {
-      name: "Hello Winter",
-      hintergrund: farbverlauf(["blau", "#FFFFFF"]),
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
-        [[0.15, 0.1], [0.8, 0.08], [0.5, 0.15], [0.1, 0.45], [0.88, 0.5], [0.3, 0.55], [0.7, 0.6]]
-          .forEach(([x, y]) => emojiMalen(ctx, "❄️", w * x, h * y, s * 0.08));
-        schreiben(ctx, w, "Hello Winter", w / 2, h * 0.32, s * 0.13, "Pacifico");
-        emojiMalen(ctx, "🏂", w / 2, h * 0.78, s * 0.22);
+        satz(ctx, w, "FROHE", w / 2, h * 0.58, s * 0.036,
+          { schrift: "Nunito", gewicht: 700, farbe: hell.gelb, sperrung: 0.4 });
+        satz(ctx, w, "Weihnachten", w / 2, h * 0.66, s * 0.13, { kursiv: true, farbe: "#FFFFFF" });
+        trenner(ctx, w, h * 0.73, hell.gelb);
+        satz(ctx, w, "und ein glückliches neues Jahr", w / 2, h * 0.785, s * 0.044,
+          { kursiv: true, farbe: "#FFFFFF" });
       }
     },
     {
-      name: "Beach Day",
+      name: "Silvester",
       hintergrund: (ctx, w, h) => {
-        farbverlauf(["blau", "hellerHimmel"])(ctx, w, h);
-        ctx.fillStyle = hell.gelb; // Sand
-        ctx.fillRect(0, h * 0.72, w, h * 0.28);
-        linie(ctx, 0, h * 0.72, w, h * 0.72, hell.orange, 3);
+        const s = Math.min(w, h);
+        const dicke = Math.max(0.5, s * 0.004);
+        einfarbig(papierFarbe)(ctx, w, h);
+        const v = ctx.createLinearGradient(0, 0, 0, h * 0.48);
+        v.addColorStop(0, hell.blau);
+        v.addColorStop(1, papierFarbe);
+        ctx.fillStyle = v;
+        ctx.fillRect(0, 0, w, h * 0.48);
+        feuerwerk(ctx, w * 0.32, h * 0.19, s * 0.15, akzent(6), dicke);
+        feuerwerk(ctx, w * 0.72, h * 0.14, s * 0.11, akzent(1), dicke);
+        feuerwerk(ctx, w * 0.64, h * 0.36, s * 0.08, akzent(4), dicke);
+        feuerwerk(ctx, w * 0.2, h * 0.39, s * 0.06, akzent(0), dicke);
+        rahmen(ctx, w, h, akzent(1));
+        infoZeilen(ctx, w, h, ["Zeit", "Ort"], 0.8, 0.07, akzent(1));
       },
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
-        emojiMalen(ctx, "☀️", w * 0.8, h * 0.12, s * 0.18);
-        schreiben(ctx, w, "Beach Day", w / 2, h * 0.35, s * 0.14, "Pacifico");
-        emojiMalen(ctx, "🏐", w / 2, h * 0.58, s * 0.16);
-        emojiMalen(ctx, "🌴", w * 0.15, h * 0.68, s * 0.22);
-        emojiMalen(ctx, "🐚", w * 0.75, h * 0.86, s * 0.1);
+        satz(ctx, w, "EINLADUNG ZUR", w / 2, h * 0.53, s * 0.034,
+          { schrift: "Nunito", gewicht: 700, farbe: akzent(1), sperrung: 0.25 });
+        satz(ctx, w, "Silvesterparty", w / 2, h * 0.61, s * 0.105, { kursiv: true });
+        trenner(ctx, w, h * 0.675, akzent(1));
+        satz(ctx, w, "31. Dezember", w / 2, h * 0.725, s * 0.05);
+        satz(ctx, w, "Auf ein wundervolles neues Jahr", w / 2, h * 0.935, s * 0.042, { kursiv: true });
       }
     },
     {
-      name: "Blumenrahmen",
-      hintergrund: einfarbig("#FFFFFF"),
-      elemente: (ctx, w, h) => {
-        const s = Math.min(w, h);
-        [[0.1, 0.07], [0.9, 0.07], [0.1, 0.93], [0.9, 0.93]]
-          .forEach(([x, y]) => emojiMalen(ctx, "🌿", w * x, h * y, s * 0.16));
-        ["🌸", "🍃", "🌼"].forEach((emoji, i) => {
-          const x = w * (0.32 + i * 0.18);
-          emojiMalen(ctx, emoji, x, h * 0.05, s * 0.1);
-          emojiMalen(ctx, emoji, x, h * 0.95, s * 0.1);
-        });
-        ["🍃", "🌷", "🍃"].forEach((emoji, i) => {
-          const y = h * (0.3 + i * 0.2);
-          emojiMalen(ctx, emoji, w * 0.07, y, s * 0.1);
-          emojiMalen(ctx, emoji, w * 0.93, y, s * 0.1);
-        });
-      }
-    },
-    {
-      name: "Einladung",
+      name: "Save the Date",
       hintergrund: (ctx, w, h) => {
-        farbverlauf(["pink", "orange"])(ctx, w, h);
-        ausfuellZeilen(ctx, w, h, ["Wann:", "Wo:", "Was:"], 0.62);
+        const s = Math.min(w, h);
+        const dicke = Math.max(0.5, s * 0.004);
+        einfarbig(papierFarbe)(ctx, w, h);
+        zweig(ctx, w * 0.08, h * 0.07, s * 0.42, 0.55, akzent(2), hell.gruen, dicke);
+        zweig(ctx, w * 0.93, h * 0.95, s * 0.34, 0.55 + Math.PI, akzent(2), hell.gruen, dicke);
+        rahmen(ctx, w, h, akzent(2));
+        infoZeilen(ctx, w, h, ["Datum", "Ort"], 0.66, 0.075, akzent(2));
       },
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
-        emojiMalen(ctx, "🎀", w / 2, h * 0.13, s * 0.2);
-        schreiben(ctx, w, "Du bist", w / 2, h * 0.3, s * 0.1, "Fredoka");
-        schreiben(ctx, w, "eingeladen!", w / 2, h * 0.42, s * 0.13, "Pacifico");
-        emojiMalen(ctx, "✨", w * 0.18, h * 0.14, s * 0.08);
-        emojiMalen(ctx, "✨", w * 0.82, h * 0.14, s * 0.08);
+        satz(ctx, w, "BITTE VORMERKEN", w / 2, h * 0.3, s * 0.034,
+          { schrift: "Nunito", gewicht: 700, farbe: akzent(2), sperrung: 0.25 });
+        satz(ctx, w, "Save the Date", w / 2, h * 0.39, s * 0.12, { kursiv: true });
+        trenner(ctx, w, h * 0.465, akzent(2));
+        satz(ctx, w, "Wir feiern und freuen uns auf dich", w / 2, h * 0.53, s * 0.042, { kursiv: true });
+        satz(ctx, w, "Einladung folgt", w / 2, h * 0.8, s * 0.036,
+          { schrift: "Nunito", farbe: akzent(2), sperrung: 0.1 });
+      }
+    },
+    {
+      name: "Sommerfest",
+      hintergrund: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        einfarbig(papierFarbe)(ctx, w, h);
+        const v = ctx.createLinearGradient(0, 0, 0, h * 0.47);
+        v.addColorStop(0, hell.gelb);
+        v.addColorStop(1, papierFarbe);
+        ctx.fillStyle = v;
+        ctx.fillRect(0, 0, w, h * 0.47);
+        // Eine grosse Sonne, unten mit Streifen wie bei einem Sonnenuntergang
+        kreis(ctx, w / 2, h * 0.3, s * 0.2, hell.orange);
+        for (let i = 0; i < 5; i++) {
+          const y = h * (0.33 + i * 0.03);
+          ctx.fillStyle = papierFarbe;
+          ctx.fillRect(0, y, w, s * 0.006 * (i + 1));
+        }
+        linie(ctx, w * 0.12, h * 0.46, w * 0.88, h * 0.46, akzent(4), Math.max(0.5, s * 0.004));
+        rahmen(ctx, w, h, akzent(4));
+        infoZeilen(ctx, w, h, ["Datum", "Zeit", "Ort"], 0.74, 0.07, akzent(4));
+      },
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        satz(ctx, w, "HERZLICHE EINLADUNG ZUM", w / 2, h * 0.53, s * 0.032,
+          { schrift: "Nunito", gewicht: 700, farbe: akzent(4), sperrung: 0.2 });
+        satz(ctx, w, "Sommerfest", w / 2, h * 0.61, s * 0.12, { kursiv: true });
+        trenner(ctx, w, h * 0.67, akzent(4));
+        satz(ctx, w, "Bring gute Laune mit", w / 2, h * 0.935, s * 0.042, { kursiv: true });
+      }
+    },
+    {
+      name: "Danke",
+      hintergrund: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        einfarbig(hell.gruen)(ctx, w, h);
+        const rand = s * 0.07;
+        ctx.fillStyle = papierFarbe;
+        ctx.fillRect(rand, rand, w - 2 * rand, h - 2 * rand);
+        ctx.save();
+        ctx.strokeStyle = akzent(2);
+        ctx.lineWidth = Math.max(0.5, s * 0.003);
+        const innen = rand + s * 0.025;
+        ctx.strokeRect(innen, innen, w - 2 * innen, h - 2 * innen);
+        ctx.restore();
+        schreibZeilen(ctx, w, h, 4, 0.62, 0.075);
+      },
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        satz(ctx, w, "Danke", w / 2, h * 0.3, s * 0.2, { kursiv: true });
+        trenner(ctx, w, h * 0.41, akzent(2));
+        satz(ctx, w, "VON GANZEM HERZEN", w / 2, h * 0.47, s * 0.032,
+          { schrift: "Nunito", gewicht: 700, farbe: akzent(2), sperrung: 0.25 });
+      }
+    },
+    {
+      name: "Glückwunsch",
+      hintergrund: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        einfarbig(papierFarbe)(ctx, w, h);
+        // Feines Konfetti oben und unten
+        const zz = zufall(42);
+        const farbNummern = [0, 1, 2, 4, 5, 6];
+        for (let i = 0; i < 70; i++) {
+          const x = w * (0.06 + zz() * 0.88);
+          const oben = i % 2 === 0;
+          const y = oben ? h * (0.05 + zz() * 0.2) : h * (0.8 + zz() * 0.15);
+          const laenge = s * (0.015 + zz() * 0.02);
+          const winkel = zz() * Math.PI;
+          const farbe = akzent(farbNummern[Math.floor(zz() * farbNummern.length)]);
+          linie(ctx, x, y, x + Math.cos(winkel) * laenge, y + Math.sin(winkel) * laenge, farbe, Math.max(0.6, s * 0.006));
+        }
+        schreibZeilen(ctx, w, h, 3, 0.6, 0.07);
+      },
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        satz(ctx, w, "ALLES GUTE", w / 2, h * 0.3, s * 0.034,
+          { schrift: "Nunito", gewicht: 700, farbe: akzent(6), sperrung: 0.3 });
+        satz(ctx, w, "Herzlichen", w / 2, h * 0.37, s * 0.1, { kursiv: true });
+        satz(ctx, w, "Glückwunsch", w / 2, h * 0.45, s * 0.1, { kursiv: true });
+        trenner(ctx, w, h * 0.51, akzent(6));
       }
     },
     {
       name: "Turnier",
       hintergrund: (ctx, w, h) => {
-        farbverlauf(["violett", "blau"])(ctx, w, h);
-        ausfuellZeilen(ctx, w, h, ["Datum:", "Ort:"], 0.8);
+        const s = Math.min(w, h);
+        const dicke = Math.max(0.6, s * 0.007);
+        einfarbig(papierFarbe)(ctx, w, h);
+        // Ein Volleyball aus feinen Linien
+        const x = w / 2;
+        const y = h * 0.27;
+        const r = s * 0.2;
+        kreis(ctx, x, y, r, hell.blau);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.clip();
+        [[-1.15, -0.15, 1.2], [0.85, -1.05, 1.25], [0.3, 1.3, 1.15]].forEach(([dx, dy, f]) =>
+          kreis(ctx, x + dx * r, y + dy * r, r * f, akzent(1), true, dicke));
+        ctx.restore();
+        kreis(ctx, x, y, r, akzent(1), true, dicke);
+        rahmen(ctx, w, h, akzent(1));
+        infoZeilen(ctx, w, h, ["Datum", "Ort", "Anmeldung"], 0.74, 0.07, akzent(1));
       },
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
-        schreiben(ctx, w, "Volleyball", w / 2, h * 0.15, s * 0.14, "Fredoka");
-        schreiben(ctx, w, "Turnier", w / 2, h * 0.28, s * 0.14, "Pacifico");
-        emojiMalen(ctx, "🏐", w / 2, h * 0.53, s * 0.3);
-      }
-    },
-    {
-      name: "Dreamy",
-      hintergrund: farbverlauf(["violett", "pink", "orange"]),
-      elemente: (ctx, w, h) => {
-        const s = Math.min(w, h);
-        emojiMalen(ctx, "🌙", w * 0.75, h * 0.15, s * 0.2);
-        [[0.2, 0.12], [0.4, 0.26], [0.85, 0.36], [0.15, 0.64]]
-          .forEach(([x, y], i) => emojiMalen(ctx, i % 2 ? "⭐" : "✨", w * x, h * y, s * 0.08));
-        schreiben(ctx, w, "Dream big", w / 2, h * 0.48, s * 0.18, "Caveat");
-        emojiMalen(ctx, "☁️", w * 0.28, h * 0.82, s * 0.2);
-        emojiMalen(ctx, "☁️", w * 0.72, h * 0.88, s * 0.16);
+        satz(ctx, w, "VOLLEYBALL", w / 2, h * 0.53, s * 0.036,
+          { schrift: "Nunito", gewicht: 700, farbe: akzent(1), sperrung: 0.35 });
+        satz(ctx, w, "Turnier", w / 2, h * 0.61, s * 0.13, { kursiv: true });
+        trenner(ctx, w, h * 0.675, akzent(1));
+        satz(ctx, w, "Für alle, die gerne spielen", w / 2, h * 0.935, s * 0.042, { kursiv: true });
       }
     }
   ];
@@ -1263,7 +1534,9 @@
   // Wartet, bis alle drei Schriften aus dem Internet geladen sind
   function schriftenLaden() {
     return Promise.all(
-      ["Fredoka", "Caveat", "Pacifico"].map((schrift) => document.fonts.load(`40px "${schrift}"`))
+      ['40px "Fredoka"', '40px "Caveat"', '40px "Pacifico"', '700 40px "Nunito"',
+       '40px "Playfair Display"', 'italic 40px "Playfair Display"']
+        .map((schrift) => document.fonts.load(schrift))
     ).catch(() => {});
   }
 
