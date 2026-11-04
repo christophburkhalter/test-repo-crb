@@ -1281,6 +1281,7 @@
     // Wer etwas Neues macht, kann das Weggenommene nicht mehr wiederholen
     zukunft.length = 0;
     rueckgaengigKnoepfeZeigen();
+    entwurfBald(); // gleich danach den Entwurf sichern (Teil 14b)
   }
 
   // Graut die Knöpfe aus, wenn es nichts zurück- oder vorzuholen gibt
@@ -1424,6 +1425,7 @@
   // Finger hebt ab: Linie fertig. Den Leuchtschein wieder ausschalten,
   // damit Text und Sticker nicht leuchten.
   function aufhoeren() {
+    if (zeichneGerade) entwurfBald();
     zeichneGerade = false;
     clearTimeout(halteUhr);
     pinsel.shadowBlur = 0;
@@ -2000,6 +2002,7 @@
     zukunft.push(fotoVonJetzt()); // so wie es jetzt ist, für "Wiederholen"
     fotoZeigen(letztesFoto);
     rueckgaengigKnoepfeZeigen();
+    entwurfBald();
   });
 
   vorKnopf.addEventListener("click", () => {
@@ -2008,6 +2011,7 @@
     verlauf.push(fotoVonJetzt()); // so wie es jetzt ist, für "Rückgängig"
     fotoZeigen(naechstesFoto);
     rueckgaengigKnoepfeZeigen();
+    entwurfBald();
   });
 
   // ===== 11. Knopf "Neues Blatt" =====
@@ -2312,6 +2316,72 @@
     }
   });
 
+  // ===== 14b. Entwurf automatisch sichern =====
+  // Nach jeder Änderung und beim Verlassen der App wird das Bild still auf
+  // dem Handy gesichert. Beim nächsten Öffnen ist es wieder da, auch wenn
+  // Android die App im Hintergrund geschlossen hat.
+  let entwurfUhr = null;
+  let entwurfGeaendert = false;
+
+  // Etwas hat sich geändert: in einer Sekunde sichern
+  // (so wird bei vielen schnellen Strichen nicht dauernd gespeichert)
+  function entwurfBald() {
+    entwurfGeaendert = true;
+    clearTimeout(entwurfUhr);
+    entwurfUhr = setTimeout(entwurfSichern, 1000);
+  }
+
+  // Welcher Hintergrund ist gerade da? Wir merken uns die Nummer,
+  // denn die Malfunktion selbst kann man nicht speichern.
+  function hintergrundNummer() {
+    const hg = hintergruende.findIndex((x) => x.malen === aktuellerHintergrund);
+    if (hg >= 0) return { art: "hintergrund", nummer: hg };
+    const vorlage = vorlagen.findIndex((x) => x.hintergrund === aktuellerHintergrund);
+    if (vorlage >= 0) return { art: "vorlage", nummer: vorlage };
+    return { art: "hintergrund", nummer: 0 };
+  }
+
+  function entwurfSichern() {
+    clearTimeout(entwurfUhr);
+    if (!entwurfGeaendert || !breite || !hoehe) return;
+    entwurfGeaendert = false;
+    const entwurf = {
+      bild: canvas.toDataURL("image/png"), // die Zeichnung als Bild
+      breite,
+      hoehe,
+      ...hintergrundNummer()
+    };
+    mitSpeicher("einstellungen", "readwrite", (speicher) => speicher.put(entwurf, "entwurf"))
+      .catch(() => { entwurfGeaendert = true; }); // klappt es nicht, beim nächsten Mal nochmals
+  }
+
+  // Beim Verlassen der App (andere App, Bildschirm aus) sofort sichern
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") entwurfSichern();
+  });
+  window.addEventListener("pagehide", entwurfSichern);
+
+  // Holt den gesicherten Entwurf zurück aufs Blatt
+  async function entwurfLaden() {
+    const entwurf = await mitSpeicher("einstellungen", "readonly", (speicher) => speicher.get("entwurf"))
+      .catch(() => null);
+    if (!entwurf) return;
+    const liste = entwurf.art === "vorlage"
+      ? vorlagen.map((v) => v.hintergrund)
+      : hintergruende.map((h) => h.malen);
+    aktuellerHintergrund = liste[entwurf.nummer] || hintergruende[0].malen;
+    hintergrundMalen();
+    const bild = new Image();
+    bild.onload = () => {
+      pinsel.save();
+      pinsel.globalCompositeOperation = "source-over";
+      pinsel.shadowBlur = 0;
+      pinsel.drawImage(bild, 0, 0, entwurf.breite, entwurf.hoehe);
+      pinsel.restore();
+    };
+    bild.src = entwurf.bild;
+  }
+
   // ===== 15. Beim Start =====
   // Wenn das Blatt seine Grösse ändert (z.B. Handy gedreht), neu anpassen.
   // Deine Zeichnung bleibt dabei erhalten.
@@ -2321,6 +2391,9 @@
   let gemerkterStil = "erdton";
   try { gemerkterStil = localStorage.getItem("dreamydraw-stil") || "erdton"; } catch (e) {}
   stilAnwenden(gemerkterStil);
+
+  // Das Bild vom letzten Mal wieder hinlegen
+  entwurfLaden();
 
   galerieLaden();
   mitSpeicher("einstellungen", "readonly", (speicher) => speicher.get("logo"))
