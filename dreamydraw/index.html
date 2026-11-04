@@ -578,9 +578,11 @@
   let breite = 0;  // so breit ist das Blatt
   let hoehe = 0;   // so hoch ist das Blatt
 
-  const pastell = {
-    lavendel: "#CDB4F0", himmelblau: "#A9D6F5", mint: "#B5E8C8", vanille: "#FDF1A8",
-    pfirsich: "#FFD3A8", koralle: "#F8B4B4", rosa: "#F9C6E0"
+  // Helle Erdtöne für Hintergründe und Vorlagen: hell genug, dass man
+  // mit den Zeichenfarben gut darauf malen kann.
+  const erdton = {
+    pflaume: "#DCCDD9", taubenblau: "#C6D4DC", salbei: "#D0D9C0", sand: "#EBDAB2",
+    terrakotta: "#E7C3A8", ziegel: "#DDB1A7", altrosa: "#EAD2CC"
   };
   const tinte = "#4A3F5C";
 
@@ -652,17 +654,17 @@
   // --- Die Hintergründe ---
   const hintergruende = [
     { name: "Weiss",    malen: einfarbig("#FFFFFF") },
-    { name: "Lavendel", malen: einfarbig(pastell.lavendel) },
-    { name: "Mint",     malen: einfarbig(pastell.mint) },
-    { name: "Rosa",     malen: einfarbig(pastell.rosa) },
-    { name: "Vanille",  malen: einfarbig(pastell.vanille) },
-    { name: "Pfirsich", malen: einfarbig(pastell.pfirsich) },
-    { name: "Sunset",   malen: farbverlauf([pastell.pfirsich, pastell.rosa, pastell.lavendel]) },
-    { name: "Himmel",   malen: farbverlauf([pastell.himmelblau, "#FFFFFF"]) },
+    { name: "Pflaume",  malen: einfarbig(erdton.pflaume) },
+    { name: "Salbei",   malen: einfarbig(erdton.salbei) },
+    { name: "Altrosa",  malen: einfarbig(erdton.altrosa) },
+    { name: "Sand",     malen: einfarbig(erdton.sand) },
+    { name: "Terrakotta", malen: einfarbig(erdton.terrakotta) },
+    { name: "Sunset",   malen: farbverlauf([erdton.terrakotta, erdton.altrosa, erdton.pflaume]) },
+    { name: "Himmel",   malen: farbverlauf([erdton.taubenblau, "#FFFFFF"]) },
     {
-      name: "Regenbogen",
+      name: "Streifen",
       malen: (ctx, w, h) => {
-        const farbListe = Object.values(pastell);
+        const farbListe = Object.values(erdton);
         const streifen = h / farbListe.length;
         farbListe.forEach((farbe, i) => {
           ctx.fillStyle = farbe;
@@ -675,7 +677,7 @@
       malen: (ctx, w, h) => {
         einfarbig("#FFFFFF")(ctx, w, h);
         const abstand = w / 10;
-        ctx.fillStyle = pastell.lavendel;
+        ctx.fillStyle = erdton.pflaume;
         for (let y = abstand / 2; y < h; y += abstand) {
           for (let x = abstand / 2; x < w; x += abstand) {
             ctx.beginPath();
@@ -690,8 +692,8 @@
       malen: (ctx, w, h) => {
         einfarbig("#FFFFFF")(ctx, w, h);
         const abstand = w / 16;
-        for (let x = abstand; x < w; x += abstand) linie(ctx, x, 0, x, h, pastell.himmelblau, 1);
-        for (let y = abstand; y < h; y += abstand) linie(ctx, 0, y, w, y, pastell.himmelblau, 1);
+        for (let x = abstand; x < w; x += abstand) linie(ctx, x, 0, x, h, erdton.taubenblau, 1);
+        for (let y = abstand; y < h; y += abstand) linie(ctx, 0, y, w, y, erdton.taubenblau, 1);
       }
     },
     {
@@ -699,14 +701,14 @@
       malen: (ctx, w, h) => {
         einfarbig("#FFFDF6")(ctx, w, h);
         const abstand = h / 18;
-        for (let y = abstand * 2; y < h; y += abstand) linie(ctx, 0, y, w, y, pastell.himmelblau, 1);
-        linie(ctx, w * 0.12, 0, w * 0.12, h, pastell.koralle, 1.5);
+        for (let y = abstand * 2; y < h; y += abstand) linie(ctx, 0, y, w, y, erdton.taubenblau, 1);
+        linie(ctx, w * 0.12, 0, w * 0.12, h, erdton.ziegel, 1.5);
       }
     },
     {
       name: "Wolken",
       malen: (ctx, w, h) => {
-        farbverlauf([pastell.himmelblau, "#E4F2FC"])(ctx, w, h);
+        farbverlauf([erdton.taubenblau, "#EAEEEF"])(ctx, w, h);
         const s = Math.min(w, h);
         wolke(ctx, w * 0.25, h * 0.15, s * 0.08);
         wolke(ctx, w * 0.75, h * 0.35, s * 0.1);
@@ -725,10 +727,10 @@
       hintergrund: (ctx, w, h) => {
         einfarbig("#FFFDF6")(ctx, w, h);
         const s = Math.min(w, h);
-        linie(ctx, w * 0.06, h * 0.55, w * 0.94, h * 0.55, pastell.lavendel, 2);
+        linie(ctx, w * 0.06, h * 0.55, w * 0.94, h * 0.55, erdton.pflaume, 2);
         // Briefmarke
         ctx.setLineDash([s * 0.02, s * 0.015]);
-        ctx.strokeStyle = pastell.koralle;
+        ctx.strokeStyle = erdton.ziegel;
         ctx.lineWidth = 2;
         ctx.strokeRect(w * 0.92 - s * 0.22, h * 0.6, s * 0.22, s * 0.27);
         ctx.setLineDash([]);
@@ -736,14 +738,14 @@
         // Zeilen für die Adresse
         for (let i = 0; i < 3; i++) {
           const y = h * (0.74 + i * 0.08);
-          linie(ctx, w * 0.06, y, w * 0.6, y, pastell.himmelblau, 2);
+          linie(ctx, w * 0.06, y, w * 0.6, y, erdton.taubenblau, 2);
         }
       },
       elemente: null
     },
     {
       name: "Hello Winter",
-      hintergrund: farbverlauf([pastell.himmelblau, "#FFFFFF"]),
+      hintergrund: farbverlauf([erdton.taubenblau, "#FFFFFF"]),
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
         [[0.15, 0.1], [0.8, 0.08], [0.5, 0.15], [0.1, 0.45], [0.88, 0.5], [0.3, 0.55], [0.7, 0.6]]
@@ -755,10 +757,10 @@
     {
       name: "Beach Day",
       hintergrund: (ctx, w, h) => {
-        farbverlauf([pastell.himmelblau, "#F2FAFF"])(ctx, w, h);
-        ctx.fillStyle = pastell.vanille; // Sand
+        farbverlauf([erdton.taubenblau, "#F3F0EA"])(ctx, w, h);
+        ctx.fillStyle = erdton.sand; // Sand
         ctx.fillRect(0, h * 0.72, w, h * 0.28);
-        linie(ctx, 0, h * 0.72, w, h * 0.72, pastell.pfirsich, 3);
+        linie(ctx, 0, h * 0.72, w, h * 0.72, erdton.terrakotta, 3);
       },
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
@@ -791,7 +793,7 @@
     {
       name: "Einladung",
       hintergrund: (ctx, w, h) => {
-        farbverlauf([pastell.rosa, pastell.pfirsich])(ctx, w, h);
+        farbverlauf([erdton.altrosa, erdton.terrakotta])(ctx, w, h);
         ausfuellZeilen(ctx, w, h, ["Wann:", "Wo:", "Was:"], 0.62);
       },
       elemente: (ctx, w, h) => {
@@ -806,7 +808,7 @@
     {
       name: "Turnier",
       hintergrund: (ctx, w, h) => {
-        farbverlauf([pastell.lavendel, pastell.himmelblau])(ctx, w, h);
+        farbverlauf([erdton.pflaume, erdton.taubenblau])(ctx, w, h);
         ausfuellZeilen(ctx, w, h, ["Datum:", "Ort:"], 0.8);
       },
       elemente: (ctx, w, h) => {
@@ -818,7 +820,7 @@
     },
     {
       name: "Dreamy",
-      hintergrund: farbverlauf([pastell.lavendel, pastell.rosa, pastell.pfirsich]),
+      hintergrund: farbverlauf([erdton.pflaume, erdton.altrosa, erdton.terrakotta]),
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
         emojiMalen(ctx, "🌙", w * 0.75, h * 0.15, s * 0.2);
