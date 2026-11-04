@@ -420,9 +420,10 @@
   }
 
   /* Die Farbtöpfchen */
+  #farben { gap: 4px; } /* 10 Töpfchen müssen nebeneinander passen */
   .farbe {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     border: 3px solid var(--papier);
     box-shadow: 0 1px 4px rgba(75, 63, 55, 0.2);
@@ -436,6 +437,23 @@
   /* Das weisse Töpfchen bekommt einen feinen Rand, sonst sieht man es kaum */
   .farbe.weiss { box-shadow: inset 0 0 0 1px rgba(75, 63, 55, 0.25), 0 1px 4px rgba(75, 63, 55, 0.2); }
   .farbe.weiss.aktiv { box-shadow: inset 0 0 0 1px rgba(75, 63, 55, 0.25), 0 0 0 3px var(--text); }
+  /* Das Regenbogen-Töpfchen: aussen alle Farben, innen die eigene Farbe */
+  .farbe.mischen {
+    background: conic-gradient(#FF5E5E, #FFD25E, #7CE07C, #5EC8FF, #9B7BFF, #FF6EC7, #FF5E5E);
+  }
+  .farbe.mischen.hat-farbe {
+    background:
+      radial-gradient(circle, var(--eigene) 0 42%, transparent 46%),
+      conic-gradient(#FF5E5E, #FFD25E, #7CE07C, #5EC8FF, #9B7BFF, #FF6EC7, #FF5E5E);
+  }
+  /* Da, aber nicht zu sehen (der Farbmischer) */
+  .unsichtbar {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
 
   /* Die Pinseldicken und die Werkzeuge (Radierer, Rückgängig, Wiederholen) */
   .werkzeuge { gap: 4px; } /* 9 Knöpfe müssen nebeneinander passen */
@@ -592,6 +610,8 @@
 <footer>
   <!-- Die Farbtöpfchen werden im JavaScript hier eingefüllt -->
   <div class="reihe" id="farben"></div>
+  <!-- Unsichtbarer Farbmischer: öffnet sich über das Regenbogen-Töpfchen -->
+  <input type="color" id="farb-mischer" class="unsichtbar" tabindex="-1" aria-hidden="true">
 
   <div class="reihe werkzeuge">
     <!-- Drei Pinseldicken: dünn, mittel, dick -->
@@ -1656,6 +1676,21 @@
   // Beim Wechsel des Farb-Styles werden die Knöpfe neu gebaut.
   const farbenReihe = document.getElementById("farben");
 
+  // Die selbst gemischte Farbe. Sie gilt in allen Farb-Styles
+  // und wird gemerkt, damit sie beim nächsten Öffnen noch da ist.
+  const farbMischer = document.getElementById("farb-mischer");
+  let eigeneFarbe = null;
+  try { eigeneFarbe = localStorage.getItem("dreamydraw-eigene-farbe"); } catch (e) {}
+
+  // Eine Farbe zum Malen auswählen und den Ring ums richtige Töpfchen legen
+  function farbeWaehlen(wert) {
+    aktuelleFarbe = wert;
+    pinsel.strokeStyle = aktuelleFarbe;
+    radiererAus(); // wer eine Farbe wählt, will wieder malen
+    farbenReihe.querySelector(".aktiv")?.classList.remove("aktiv");
+    farbenReihe.querySelector(`[data-wert="${wert}"]`)?.classList.add("aktiv");
+  }
+
   function farbKnoepfeZeigen() {
     farbenReihe.replaceChildren();
     farbenListe().forEach((farbe) => {
@@ -1668,19 +1703,46 @@
       knopf.dataset.wert = farbe.wert;
       knopf.setAttribute("aria-label", farbe.name);
 
-      knopf.addEventListener("click", () => {
-        aktuelleFarbe = farbe.wert;
-        pinsel.strokeStyle = aktuelleFarbe;
-        radiererAus(); // wer eine Farbe wählt, will wieder malen
-        // Den Ring vom alten Töpfchen weg, zum neuen hin
-        farbenReihe.querySelector(".aktiv")?.classList.remove("aktiv");
-        knopf.classList.add("aktiv");
-      });
+      knopf.addEventListener("click", () => farbeWaehlen(farbe.wert));
 
       farbenReihe.appendChild(knopf);
     });
+
+    // Zum Schluss das Regenbogen-Töpfchen für die eigene Farbe.
+    // In der Mitte sieht man die zuletzt gemischte Farbe.
+    const mischKnopf = document.createElement("button");
+    mischKnopf.type = "button";
+    mischKnopf.className = "farbe mischen";
+    mischKnopf.setAttribute("aria-label", "Eigene Farbe mischen");
+    if (eigeneFarbe) {
+      mischKnopf.dataset.wert = eigeneFarbe;
+      mischKnopf.style.setProperty("--eigene", eigeneFarbe);
+      mischKnopf.classList.add("hat-farbe");
+      if (eigeneFarbe === aktuelleFarbe && !radiertGerade) mischKnopf.classList.add("aktiv");
+    }
+    mischKnopf.addEventListener("click", () => {
+      // Eigene Farbe schon da, aber nicht ausgewählt? Dann einfach auswählen.
+      // Sonst den Farbmischer öffnen.
+      if (eigeneFarbe && aktuelleFarbe !== eigeneFarbe) {
+        farbeWaehlen(eigeneFarbe);
+        return;
+      }
+      farbMischer.value = eigeneFarbe || aktuelleFarbe;
+      farbMischer.click();
+    });
+    farbenReihe.appendChild(mischKnopf);
   }
   farbKnoepfeZeigen();
+
+  // Im Farbmischer eine Farbe gewählt: merken, auswählen, Töpfchen neu zeigen
+  farbMischer.addEventListener("change", () => {
+    eigeneFarbe = farbMischer.value;
+    try { localStorage.setItem("dreamydraw-eigene-farbe", eigeneFarbe); } catch (e) {}
+    aktuelleFarbe = eigeneFarbe;
+    pinsel.strokeStyle = aktuelleFarbe;
+    radiererAus();
+    farbKnoepfeZeigen();
+  });
 
   // ===== 5. Pinseldicke =====
   document.querySelectorAll(".dicke").forEach((knopf) => {
@@ -1701,7 +1763,7 @@
     pinsel.globalCompositeOperation = "source-over";
     radiererKnopf.classList.remove("aktiv");
     // Den Ring wieder um die zuletzt gewählte Farbe legen
-    farbenReihe.querySelector(`[data-wert="${aktuelleFarbe}"]`).classList.add("aktiv");
+    farbenReihe.querySelector(`[data-wert="${aktuelleFarbe}"]`)?.classList.add("aktiv");
   }
 
   radiererKnopf.addEventListener("click", () => {
