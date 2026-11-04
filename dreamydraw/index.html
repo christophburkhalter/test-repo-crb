@@ -16,14 +16,19 @@
 <style>
   /* Layout: eine App über den ganzen Bildschirm – oben der Name, in der Mitte das Blatt, unten die Knöpfe */
   :root {
-    /* Noras sanfte Erdtöne */
-    --pflaume: #DCCDD9;
-    --taubenblau: #C6D4DC;
-    --salbei: #D0D9C0;
-    --sand: #EBDAB2;
-    --terrakotta: #E7C3A8;
-    --ziegel: #DDB1A7;
-    --altrosa: #EAD2CC;
+    /* Die Farben des Farb-Styles. Hier stehen die Erdtöne, das JavaScript
+       tauscht sie aus, wenn man einen anderen Style wählt (Teil 1b). */
+    --violett: #DCCDD9;
+    --blau: #C6D4DC;
+    --gruen: #D0D9C0;
+    --gelb: #EBDAB2;
+    --orange: #E7C3A8;
+    --rot: #DDB1A7;
+    --pink: #EAD2CC;
+    --logo-1: #DCCDD9;
+    --logo-2: #EAD2CC;
+    --logo-3: #E7C3A8;
+    --stern-rand: #CDA45E;
 
     /* Grundfarben der App */
     --hintergrund: #F7F3EC;  /* helles Leinen */
@@ -126,8 +131,8 @@
     font-weight: 500;
     font-size: 1rem;
     color: var(--text);
-    background: var(--salbei);
-    border: 2px solid var(--salbei);
+    background: var(--gruen);
+    border: 2px solid var(--gruen);
     border-radius: 99px;
     width: 40px;
     height: 40px;
@@ -135,15 +140,15 @@
     cursor: pointer;
   }
   #speichern {
-    background: var(--altrosa);
-    border-color: var(--altrosa);
+    background: var(--pink);
+    border-color: var(--pink);
   }
   #galerie {
-    background: var(--taubenblau);
-    border-color: var(--taubenblau);
+    background: var(--blau);
+    border-color: var(--blau);
   }
   #vorlagen.aktiv, #galerie.aktiv, #speichern.aktiv {
-    background: var(--pflaume);
+    background: var(--violett);
     border-color: var(--text);
   }
 
@@ -178,7 +183,7 @@
     color: var(--text);
     background: var(--papier);
     padding: 10px 14px;
-    border: 2px solid var(--pflaume);
+    border: 2px solid var(--violett);
     border-radius: 12px;
   }
   .textpanel input:focus {
@@ -229,6 +234,36 @@
   }
   .kachel span { padding: 3px 2px 5px; }
 
+  /* Die drei Knöpfe für den Farb-Style */
+  .stil-wahl {
+    display: flex;
+    gap: 8px;
+  }
+  .stil-knopf {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    background: var(--papier);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(75, 63, 55, 0.15);
+    color: var(--text);
+    font-family: var(--schrift-titel);
+    font-weight: 500;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .stil-knopf.aktiv { border-color: var(--text); }
+  .stil-punkte { display: flex; gap: 3px; }
+  .stil-punkte span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
   /* ---------- Speichern-Fenster ---------- */
   .speicherpanel img {
     flex: 1;
@@ -242,15 +277,15 @@
     font-weight: 500;
     font-size: 1.05rem;
     color: var(--text);
-    background: var(--altrosa);
-    border: 2px solid var(--altrosa);
+    background: var(--pink);
+    border: 2px solid var(--pink);
     border-radius: 99px;
     padding: 10px 18px;
     cursor: pointer;
   }
   .gross-knopf.hell {
     background: var(--papier);
-    border-color: var(--pflaume);
+    border-color: var(--violett);
   }
   .gross-knopf:disabled {
     opacity: 0.5;
@@ -315,7 +350,7 @@
     cursor: pointer;
   }
   .sticker.aktiv {
-    background: var(--pflaume);
+    background: var(--violett);
     border-color: var(--text);
   }
   .schriften {
@@ -327,13 +362,13 @@
     font-size: 1.05rem;
     color: var(--text);
     background: var(--papier);
-    border: 2px solid var(--pflaume);
+    border: 2px solid var(--violett);
     border-radius: 99px;
     padding: 4px 14px;
     cursor: pointer;
   }
   .schrift.aktiv {
-    background: var(--pflaume);
+    background: var(--violett);
     border-color: var(--text);
   }
 
@@ -385,7 +420,7 @@
     height: 36px;
     border-radius: 50%;
     background: var(--papier);
-    border: 2px solid var(--pflaume);
+    border: 2px solid var(--violett);
     padding: 0;
     display: grid;
     place-items: center;
@@ -397,7 +432,7 @@
     background: var(--text);
   }
   .dicke.aktiv, .werkzeug.aktiv {
-    background: var(--pflaume);
+    background: var(--violett);
     border-color: var(--text);
   }
   .werkzeug {
@@ -406,8 +441,8 @@
   }
 
   #neu {
-    background: var(--altrosa);
-    border-color: var(--altrosa);
+    background: var(--pink);
+    border-color: var(--pink);
   }
   button:active { transform: scale(0.96); }
   .farbe.aktiv:active { transform: scale(1.1); }
@@ -424,9 +459,9 @@
         <svg viewBox="0 0 40 40" aria-hidden="true">
           <defs>
             <linearGradient id="logo-verlauf" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#DCCDD9"/>
-              <stop offset="0.5" stop-color="#EAD2CC"/>
-              <stop offset="1" stop-color="#E7C3A8"/>
+              <stop offset="0" style="stop-color: var(--logo-1)"/>
+              <stop offset="0.5" style="stop-color: var(--logo-2)"/>
+              <stop offset="1" style="stop-color: var(--logo-3)"/>
             </linearGradient>
           </defs>
           <circle cx="20" cy="20" r="20" fill="url(#logo-verlauf)"/>
@@ -436,8 +471,8 @@
             <circle cx="27.5" cy="24.5" r="5.5"/>
             <rect x="14.5" y="23" width="13" height="7"/>
           </g>
-          <path d="M15.5 25.5 q2.8 -3 5.6 0 t5.6 0" stroke="#A8735A" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-          <path d="M30 6 L31.3 9.7 L35 11 L31.3 12.3 L30 16 L28.7 12.3 L25 11 L28.7 9.7 Z" fill="#EBDAB2" stroke="#CDA45E" stroke-width="0.6"/>
+          <path d="M15.5 25.5 q2.8 -3 5.6 0 t5.6 0" style="stroke: var(--stift)" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M30 6 L31.3 9.7 L35 11 L31.3 12.3 L30 16 L28.7 12.3 L25 11 L28.7 9.7 Z" style="fill: var(--gelb); stroke: var(--stern-rand)" stroke-width="0.6"/>
         </svg>
       </div>
       <h1>DreamyDraw</h1>
@@ -449,13 +484,13 @@
     </div>
   </div>
   <div class="regenbogen" aria-hidden="true">
-    <span style="background: var(--pflaume)"></span>
-    <span style="background: var(--taubenblau)"></span>
-    <span style="background: var(--salbei)"></span>
-    <span style="background: var(--sand)"></span>
-    <span style="background: var(--terrakotta)"></span>
-    <span style="background: var(--ziegel)"></span>
-    <span style="background: var(--altrosa)"></span>
+    <span style="background: var(--violett)"></span>
+    <span style="background: var(--blau)"></span>
+    <span style="background: var(--gruen)"></span>
+    <span style="background: var(--gelb)"></span>
+    <span style="background: var(--orange)"></span>
+    <span style="background: var(--rot)"></span>
+    <span style="background: var(--pink)"></span>
   </div>
 </header>
 
@@ -465,6 +500,8 @@
 
   <!-- Das Vorlagen-Fenster: die Kacheln werden im JavaScript eingefüllt -->
   <div class="vorlagenpanel" id="vorlagenpanel" hidden>
+    <h2>Farb-Style</h2>
+    <div class="stil-wahl" id="stil-wahl"></div>
     <h2>Vorlagen</h2>
     <div class="kachel-raster" id="vorlagen-raster"></div>
     <h2>Hintergründe</h2>
@@ -542,21 +579,92 @@
   const canvas = document.getElementById("zeichenflaeche");
   const pinsel = canvas.getContext("2d");
 
-  // Noras Farben zum Zeichnen: sanfte Erdtöne, wie Steine, Holz und Pflanzen.
-  // Sie sind kräftig genug, damit man sie auf dem weissen Blatt gut sieht.
-  const farben = [
-    { name: "Pflaume",    wert: "#8E7490" },
-    { name: "Taubenblau", wert: "#6F8FA3" },
-    { name: "Salbei",     wert: "#8FA27A" },
-    { name: "Ocker",      wert: "#CDA45E" },
-    { name: "Terrakotta", wert: "#C98159" },
-    { name: "Ziegel",     wert: "#A95E52" },
-    { name: "Altrosa",    wert: "#C4928A" },
-    { name: "Tinte",      wert: "#4A3F5C" }  // dunkel, gut zum Schreiben
-  ];
+  // ===== 1b. Die Farb-Styles =====
+  // Jeder Style hat:
+  //   zeichnen – 7 kräftige Farben zum Malen
+  //   hell     – 7 helle Farben für Hintergründe, Vorlagen und Knöpfe
+  //   namen    – wie die einfarbigen Hintergründe heissen
+  //   design   – die Grundfarben der App und des Logos
+  // Die Tinte (dunkel, gut zum Schreiben) bleibt in jedem Style gleich.
+  const tinte = "#4A3F5C";
+  const stile = {
+    pastell: {
+      name: "Pastell",
+      zeichnen: [
+        { name: "Lavendel",   wert: "#B596EA" },
+        { name: "Himmelblau", wert: "#7FC0EE" },
+        { name: "Mint",       wert: "#85D6A6" },
+        { name: "Vanille",    wert: "#F2D95C" },
+        { name: "Pfirsich",   wert: "#FFB877" },
+        { name: "Koralle",    wert: "#F28B8B" },
+        { name: "Rosa",       wert: "#F29AC6" }
+      ],
+      hell: {
+        violett: "#CDB4F0", blau: "#A9D6F5", gruen: "#B5E8C8", gelb: "#FDF1A8",
+        orange: "#FFD3A8", rot: "#F8B4B4", pink: "#F9C6E0"
+      },
+      namen: { violett: "Lavendel", gruen: "Mint", pink: "Rosa", gelb: "Vanille", orange: "Pfirsich" },
+      design: {
+        hintergrund: "#FBF8F3", text: "#4A3F5C", stift: "#9B7FD6",
+        logo: ["#CDB4F0", "#F9C6E0", "#FFD3A8"], sternRand: "#F2D95C",
+        hellerHimmel: "#F2FAFF", wolkenHimmel: "#E4F2FC"
+      }
+    },
+    erdton: {
+      name: "Erdtöne",
+      zeichnen: [
+        { name: "Pflaume",    wert: "#8E7490" },
+        { name: "Taubenblau", wert: "#6F8FA3" },
+        { name: "Salbei",     wert: "#8FA27A" },
+        { name: "Ocker",      wert: "#CDA45E" },
+        { name: "Terrakotta", wert: "#C98159" },
+        { name: "Ziegel",     wert: "#A95E52" },
+        { name: "Altrosa",    wert: "#C4928A" }
+      ],
+      hell: {
+        violett: "#DCCDD9", blau: "#C6D4DC", gruen: "#D0D9C0", gelb: "#EBDAB2",
+        orange: "#E7C3A8", rot: "#DDB1A7", pink: "#EAD2CC"
+      },
+      namen: { violett: "Pflaume", gruen: "Salbei", pink: "Altrosa", gelb: "Sand", orange: "Terrakotta" },
+      design: {
+        hintergrund: "#F7F3EC", text: "#4B3F37", stift: "#A8735A",
+        logo: ["#DCCDD9", "#EAD2CC", "#E7C3A8"], sternRand: "#CDA45E",
+        hellerHimmel: "#F3F0EA", wolkenHimmel: "#EAEEEF"
+      }
+    },
+    neon: {
+      name: "Neon",
+      zeichnen: [
+        { name: "Neonlila",   wert: "#A63CFF" },
+        { name: "Neonblau",   wert: "#00A6FF" },
+        { name: "Neongrün",   wert: "#19D94A" },
+        { name: "Neongelb",   wert: "#E8E000" },
+        { name: "Neonorange", wert: "#FF8A00" },
+        { name: "Neonrot",    wert: "#FF2D55" },
+        { name: "Neonpink",   wert: "#FF2BC6" }
+      ],
+      hell: {
+        violett: "#E6C8FF", blau: "#BDEBFF", gruen: "#C2FACF", gelb: "#FBFAA8",
+        orange: "#FFDCB3", rot: "#FFC4CE", pink: "#FFC7F0"
+      },
+      namen: { violett: "Lila", gruen: "Grün", pink: "Pink", gelb: "Gelb", orange: "Orange" },
+      design: {
+        hintergrund: "#FAF8FF", text: "#2C2340", stift: "#FF2BC6",
+        logo: ["#A63CFF", "#FF2BC6", "#FF8A00"], sternRand: "#E8E000",
+        hellerHimmel: "#F2FBFF", wolkenHimmel: "#DDF4FF"
+      }
+    }
+  };
+  let stil = stile.erdton;     // der Style, der gerade aktiv ist
+  const hell = { ...stil.hell }; // die hellen Farben des aktiven Styles
+
+  // Die Farbtöpfchen: die 7 Farben des Styles und die Tinte
+  function farbenListe() {
+    return [...stil.zeichnen, { name: "Tinte", wert: tinte }];
+  }
 
   // Was gerade ausgewählt ist
-  let aktuelleFarbe = farben[0].wert;
+  let aktuelleFarbe = stil.zeichnen[0].wert;
   let aktuelleDicke = 8;
   let radiertGerade = false;  // true = der Radierer ist an
   let textModus = false;      // true = das Text-Werkzeug ist an
@@ -578,13 +686,12 @@
   let breite = 0;  // so breit ist das Blatt
   let hoehe = 0;   // so hoch ist das Blatt
 
-  // Helle Erdtöne für Hintergründe und Vorlagen: hell genug, dass man
-  // mit den Zeichenfarben gut darauf malen kann.
-  const erdton = {
-    pflaume: "#DCCDD9", taubenblau: "#C6D4DC", salbei: "#D0D9C0", sand: "#EBDAB2",
-    terrakotta: "#E7C3A8", ziegel: "#DDB1A7", altrosa: "#EAD2CC"
-  };
-  const tinte = "#4A3F5C";
+  // Hintergründe und Vorlagen holen ihre Farben erst beim Malen ab.
+  // So passen sie immer zum Farb-Style, der gerade aktiv ist.
+  // "farbe" ist ein Name wie "violett" oder "hellerHimmel", oder direkt "#FFFFFF".
+  function farbeVon(farbe) {
+    return hell[farbe] || stil.design[farbe] || farbe;
+  }
 
   // --- Kleine Helfer zum Malen ---
   // Alle bekommen "ctx" (den Pinsel), "w" (Breite) und "h" (Höhe).
@@ -593,7 +700,7 @@
 
   function einfarbig(farbe) {
     return (ctx, w, h) => {
-      ctx.fillStyle = farbe;
+      ctx.fillStyle = farbeVon(farbe);
       ctx.fillRect(0, 0, w, h);
     };
   }
@@ -601,7 +708,7 @@
   function farbverlauf(farbListe) {
     return (ctx, w, h) => {
       const v = ctx.createLinearGradient(0, 0, 0, h);
-      farbListe.forEach((farbe, i) => v.addColorStop(i / (farbListe.length - 1), farbe));
+      farbListe.forEach((farbe, i) => v.addColorStop(i / (farbListe.length - 1), farbeVon(farbe)));
       ctx.fillStyle = v;
       ctx.fillRect(0, 0, w, h);
     };
@@ -654,17 +761,17 @@
   // --- Die Hintergründe ---
   const hintergruende = [
     { name: "Weiss",    malen: einfarbig("#FFFFFF") },
-    { name: "Pflaume",  malen: einfarbig(erdton.pflaume) },
-    { name: "Salbei",   malen: einfarbig(erdton.salbei) },
-    { name: "Altrosa",  malen: einfarbig(erdton.altrosa) },
-    { name: "Sand",     malen: einfarbig(erdton.sand) },
-    { name: "Terrakotta", malen: einfarbig(erdton.terrakotta) },
-    { name: "Sunset",   malen: farbverlauf([erdton.terrakotta, erdton.altrosa, erdton.pflaume]) },
-    { name: "Himmel",   malen: farbverlauf([erdton.taubenblau, "#FFFFFF"]) },
+    { get name() { return stil.namen.violett; }, malen: einfarbig("violett") },
+    { get name() { return stil.namen.gruen; }, malen: einfarbig("gruen") },
+    { get name() { return stil.namen.pink; }, malen: einfarbig("pink") },
+    { get name() { return stil.namen.gelb; }, malen: einfarbig("gelb") },
+    { get name() { return stil.namen.orange; }, malen: einfarbig("orange") },
+    { name: "Sunset",   malen: farbverlauf(["orange", "pink", "violett"]) },
+    { name: "Himmel",   malen: farbverlauf(["blau", "#FFFFFF"]) },
     {
       name: "Streifen",
       malen: (ctx, w, h) => {
-        const farbListe = Object.values(erdton);
+        const farbListe = Object.values(hell);
         const streifen = h / farbListe.length;
         farbListe.forEach((farbe, i) => {
           ctx.fillStyle = farbe;
@@ -677,7 +784,7 @@
       malen: (ctx, w, h) => {
         einfarbig("#FFFFFF")(ctx, w, h);
         const abstand = w / 10;
-        ctx.fillStyle = erdton.pflaume;
+        ctx.fillStyle = hell.violett;
         for (let y = abstand / 2; y < h; y += abstand) {
           for (let x = abstand / 2; x < w; x += abstand) {
             ctx.beginPath();
@@ -692,8 +799,8 @@
       malen: (ctx, w, h) => {
         einfarbig("#FFFFFF")(ctx, w, h);
         const abstand = w / 16;
-        for (let x = abstand; x < w; x += abstand) linie(ctx, x, 0, x, h, erdton.taubenblau, 1);
-        for (let y = abstand; y < h; y += abstand) linie(ctx, 0, y, w, y, erdton.taubenblau, 1);
+        for (let x = abstand; x < w; x += abstand) linie(ctx, x, 0, x, h, hell.blau, 1);
+        for (let y = abstand; y < h; y += abstand) linie(ctx, 0, y, w, y, hell.blau, 1);
       }
     },
     {
@@ -701,14 +808,14 @@
       malen: (ctx, w, h) => {
         einfarbig("#FFFDF6")(ctx, w, h);
         const abstand = h / 18;
-        for (let y = abstand * 2; y < h; y += abstand) linie(ctx, 0, y, w, y, erdton.taubenblau, 1);
-        linie(ctx, w * 0.12, 0, w * 0.12, h, erdton.ziegel, 1.5);
+        for (let y = abstand * 2; y < h; y += abstand) linie(ctx, 0, y, w, y, hell.blau, 1);
+        linie(ctx, w * 0.12, 0, w * 0.12, h, hell.rot, 1.5);
       }
     },
     {
       name: "Wolken",
       malen: (ctx, w, h) => {
-        farbverlauf([erdton.taubenblau, "#EAEEEF"])(ctx, w, h);
+        farbverlauf(["blau", "wolkenHimmel"])(ctx, w, h);
         const s = Math.min(w, h);
         wolke(ctx, w * 0.25, h * 0.15, s * 0.08);
         wolke(ctx, w * 0.75, h * 0.35, s * 0.1);
@@ -727,10 +834,10 @@
       hintergrund: (ctx, w, h) => {
         einfarbig("#FFFDF6")(ctx, w, h);
         const s = Math.min(w, h);
-        linie(ctx, w * 0.06, h * 0.55, w * 0.94, h * 0.55, erdton.pflaume, 2);
+        linie(ctx, w * 0.06, h * 0.55, w * 0.94, h * 0.55, hell.violett, 2);
         // Briefmarke
         ctx.setLineDash([s * 0.02, s * 0.015]);
-        ctx.strokeStyle = erdton.ziegel;
+        ctx.strokeStyle = hell.rot;
         ctx.lineWidth = 2;
         ctx.strokeRect(w * 0.92 - s * 0.22, h * 0.6, s * 0.22, s * 0.27);
         ctx.setLineDash([]);
@@ -738,14 +845,14 @@
         // Zeilen für die Adresse
         for (let i = 0; i < 3; i++) {
           const y = h * (0.74 + i * 0.08);
-          linie(ctx, w * 0.06, y, w * 0.6, y, erdton.taubenblau, 2);
+          linie(ctx, w * 0.06, y, w * 0.6, y, hell.blau, 2);
         }
       },
       elemente: null
     },
     {
       name: "Hello Winter",
-      hintergrund: farbverlauf([erdton.taubenblau, "#FFFFFF"]),
+      hintergrund: farbverlauf(["blau", "#FFFFFF"]),
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
         [[0.15, 0.1], [0.8, 0.08], [0.5, 0.15], [0.1, 0.45], [0.88, 0.5], [0.3, 0.55], [0.7, 0.6]]
@@ -757,10 +864,10 @@
     {
       name: "Beach Day",
       hintergrund: (ctx, w, h) => {
-        farbverlauf([erdton.taubenblau, "#F3F0EA"])(ctx, w, h);
-        ctx.fillStyle = erdton.sand; // Sand
+        farbverlauf(["blau", "hellerHimmel"])(ctx, w, h);
+        ctx.fillStyle = hell.gelb; // Sand
         ctx.fillRect(0, h * 0.72, w, h * 0.28);
-        linie(ctx, 0, h * 0.72, w, h * 0.72, erdton.terrakotta, 3);
+        linie(ctx, 0, h * 0.72, w, h * 0.72, hell.orange, 3);
       },
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
@@ -793,7 +900,7 @@
     {
       name: "Einladung",
       hintergrund: (ctx, w, h) => {
-        farbverlauf([erdton.altrosa, erdton.terrakotta])(ctx, w, h);
+        farbverlauf(["pink", "orange"])(ctx, w, h);
         ausfuellZeilen(ctx, w, h, ["Wann:", "Wo:", "Was:"], 0.62);
       },
       elemente: (ctx, w, h) => {
@@ -808,7 +915,7 @@
     {
       name: "Turnier",
       hintergrund: (ctx, w, h) => {
-        farbverlauf([erdton.pflaume, erdton.taubenblau])(ctx, w, h);
+        farbverlauf(["violett", "blau"])(ctx, w, h);
         ausfuellZeilen(ctx, w, h, ["Datum:", "Ort:"], 0.8);
       },
       elemente: (ctx, w, h) => {
@@ -820,7 +927,7 @@
     },
     {
       name: "Dreamy",
-      hintergrund: farbverlauf([erdton.pflaume, erdton.altrosa, erdton.terrakotta]),
+      hintergrund: farbverlauf(["violett", "pink", "orange"]),
       elemente: (ctx, w, h) => {
         const s = Math.min(w, h);
         emojiMalen(ctx, "🌙", w * 0.75, h * 0.15, s * 0.2);
@@ -953,29 +1060,34 @@
   canvas.addEventListener("pointercancel", aufhoeren);
 
   // ===== 4. Farbtöpfchen =====
-  // Für jede Farbe in der Liste machen wir einen runden Knopf
+  // Für jede Farbe in der Liste machen wir einen runden Knopf.
+  // Beim Wechsel des Farb-Styles werden die Knöpfe neu gebaut.
   const farbenReihe = document.getElementById("farben");
 
-  farben.forEach((farbe, nummer) => {
-    const knopf = document.createElement("button");
-    knopf.type = "button";
-    knopf.className = "farbe";
-    if (nummer === 0) knopf.classList.add("aktiv");
-    knopf.style.background = farbe.wert;
-    knopf.dataset.wert = farbe.wert;
-    knopf.setAttribute("aria-label", farbe.name);
+  function farbKnoepfeZeigen() {
+    farbenReihe.replaceChildren();
+    farbenListe().forEach((farbe) => {
+      const knopf = document.createElement("button");
+      knopf.type = "button";
+      knopf.className = "farbe";
+      if (farbe.wert === aktuelleFarbe && !radiertGerade) knopf.classList.add("aktiv");
+      knopf.style.background = farbe.wert;
+      knopf.dataset.wert = farbe.wert;
+      knopf.setAttribute("aria-label", farbe.name);
 
-    knopf.addEventListener("click", () => {
-      aktuelleFarbe = farbe.wert;
-      pinsel.strokeStyle = aktuelleFarbe;
-      radiererAus(); // wer eine Farbe wählt, will wieder malen
-      // Den Ring vom alten Töpfchen weg, zum neuen hin
-      farbenReihe.querySelector(".aktiv")?.classList.remove("aktiv");
-      knopf.classList.add("aktiv");
+      knopf.addEventListener("click", () => {
+        aktuelleFarbe = farbe.wert;
+        pinsel.strokeStyle = aktuelleFarbe;
+        radiererAus(); // wer eine Farbe wählt, will wieder malen
+        // Den Ring vom alten Töpfchen weg, zum neuen hin
+        farbenReihe.querySelector(".aktiv")?.classList.remove("aktiv");
+        knopf.classList.add("aktiv");
+      });
+
+      farbenReihe.appendChild(knopf);
     });
-
-    farbenReihe.appendChild(knopf);
-  });
+  }
+  farbKnoepfeZeigen();
 
   // ===== 5. Pinseldicke =====
   document.querySelectorAll(".dicke").forEach((knopf) => {
@@ -1199,18 +1311,83 @@
 
   // Die Kacheln erst bauen, wenn die Schriften da sind,
   // sonst sehen die Vorschaubilder falsch aus
-  schriftenLaden().then(() => {
+  // Beim Wechsel des Farb-Styles werden sie neu gebaut.
+  function kachelnBauen() {
     const vorlagenRaster = document.getElementById("vorlagen-raster");
+    vorlagenRaster.replaceChildren();
     vorlagen.forEach((vorlage) => {
       const bild = vorschau(vorlage.hintergrund, vorlage.elemente);
       vorlagenRaster.appendChild(kachelMachen(vorlage.name, bild, () => vorlageAnwenden(vorlage)));
     });
 
     const hintergrundRaster = document.getElementById("hintergrund-raster");
+    hintergrundRaster.replaceChildren();
     hintergruende.forEach((hg) => {
       const bild = vorschau(hg.malen);
       hintergrundRaster.appendChild(kachelMachen(hg.name, bild, () => hintergrundWaehlen(hg)));
     });
+  }
+  let schriftenBereit = false;
+  schriftenLaden().then(() => {
+    schriftenBereit = true;
+    kachelnBauen();
+  });
+
+  // ===== 9b. Farb-Style wechseln =====
+  // Tauscht alle Farben aus: Töpfchen, Hintergründe, Vorlagen, Knöpfe und Logo.
+  // Deine Zeichnung bleibt, nur der Hintergrund bekommt die neuen Farben.
+  const stilWahl = document.getElementById("stil-wahl");
+
+  function stilAnwenden(schluessel) {
+    const alterStil = stil;
+    stil = stile[schluessel] || stile.erdton;
+    Object.assign(hell, stil.hell);
+
+    // Die Knöpfe und das Logo der App umfärben
+    const wurzel = document.documentElement.style;
+    Object.entries(stil.hell).forEach(([name, wert]) => wurzel.setProperty("--" + name, wert));
+    wurzel.setProperty("--hintergrund", stil.design.hintergrund);
+    wurzel.setProperty("--text", stil.design.text);
+    wurzel.setProperty("--stift", stil.design.stift);
+    stil.design.logo.forEach((wert, i) => wurzel.setProperty("--logo-" + (i + 1), wert));
+    wurzel.setProperty("--stern-rand", stil.design.sternRand);
+    document.querySelector('meta[name="theme-color"]').content = stil.design.hintergrund;
+
+    // Wer gerade z.B. die 3. Farbe hatte, bekommt die 3. Farbe vom neuen Style
+    const nummer = alterStil.zeichnen.findIndex((f) => f.wert === aktuelleFarbe);
+    if (nummer >= 0) {
+      aktuelleFarbe = stil.zeichnen[nummer].wert;
+      pinsel.strokeStyle = aktuelleFarbe;
+    }
+    farbKnoepfeZeigen();
+    if (schriftenBereit) kachelnBauen();
+    hintergrundMalen();
+
+    stilWahl.querySelectorAll(".stil-knopf").forEach((knopf) => {
+      knopf.classList.toggle("aktiv", knopf.dataset.stil === schluessel);
+    });
+    // Den Style merken, damit er beim nächsten Öffnen wieder da ist
+    try { localStorage.setItem("dreamydraw-stil", schluessel); } catch (e) {}
+  }
+
+  // Für jeden Style ein Knopf mit ein paar Farbpunkten als Vorschau
+  Object.entries(stile).forEach(([schluessel, s]) => {
+    const knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.className = "stil-knopf";
+    knopf.dataset.stil = schluessel;
+    const punkte = document.createElement("span");
+    punkte.className = "stil-punkte";
+    [0, 1, 2, 4, 6].forEach((i) => {
+      const punkt = document.createElement("span");
+      punkt.style.background = s.zeichnen[i].wert;
+      punkte.appendChild(punkt);
+    });
+    const name = document.createElement("span");
+    name.textContent = s.name;
+    knopf.append(punkte, name);
+    knopf.addEventListener("click", () => stilAnwenden(schluessel));
+    stilWahl.appendChild(knopf);
   });
 
   // ===== 10. Rückgängig =====
@@ -1531,6 +1708,11 @@
   // Wenn das Blatt seine Grösse ändert (z.B. Handy gedreht), neu anpassen.
   // Deine Zeichnung bleibt dabei erhalten.
   new ResizeObserver(blattAnpassen).observe(canvas);
+
+  // Den zuletzt gewählten Farb-Style wieder einschalten
+  let gemerkterStil = "erdton";
+  try { gemerkterStil = localStorage.getItem("dreamydraw-stil") || "erdton"; } catch (e) {}
+  stilAnwenden(gemerkterStil);
 
   galerieLaden();
   mitSpeicher("einstellungen", "readonly", (speicher) => speicher.get("logo"))
