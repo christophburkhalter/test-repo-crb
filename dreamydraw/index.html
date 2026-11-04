@@ -1332,6 +1332,8 @@
     pinsel.lineTo(p.x, p.y); // damit auch ein einzelner Tupfer sichtbar ist
     pinsel.stroke();
     letzterPunkt = p;
+    strichPunkte = [p];
+    halteUhrStarten(p);
   });
 
   // Finger bewegt sich: Linie weiterzeichnen
@@ -1344,16 +1346,147 @@
     pinsel.lineTo(p.x, p.y);
     pinsel.stroke();
     letzterPunkt = p;
+    strichPunkte.push(p);
+    // Erst wenn sich der Finger wirklich bewegt, beginnt das Warten von vorn
+    if (abstand(p, haltePunkt) > 6) halteUhrStarten(p);
   });
 
   // Finger hebt ab: Linie fertig. Den Leuchtschein wieder ausschalten,
   // damit Text und Sticker nicht leuchten.
   function aufhoeren() {
     zeichneGerade = false;
+    clearTimeout(halteUhr);
     pinsel.shadowBlur = 0;
   }
   canvas.addEventListener("pointerup", aufhoeren);
   canvas.addEventListener("pointercancel", aufhoeren);
+
+  // ===== 3b. Perfekte Formen =====
+  // Zeichne eine Form und lass den Finger am Ende kurz still liegen:
+  // dann wird daraus eine perfekte Form. Eine gerade Linie, ein Zickzack
+  // mit geraden Stücken, ein Kreis, ein Oval, ein Dreieck oder ein Viereck.
+  const HALTEZEIT = 600;  // so lange (in Millisekunden) muss der Finger still sein
+  let strichPunkte = [];  // alle Punkte der Linie, die gerade gezeichnet wird
+  let halteUhr = null;
+  let haltePunkt = null;
+
+  function halteUhrStarten(p) {
+    clearTimeout(halteUhr);
+    haltePunkt = p;
+    halteUhr = setTimeout(formPerfektMachen, HALTEZEIT);
+  }
+
+  function abstand(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  // Wie weit ist der Punkt p von der geraden Linie durch a und b entfernt?
+  function abstandZurLinie(p, a, b) {
+    const laenge = abstand(a, b);
+    if (!laenge) return abstand(p, a);
+    return Math.abs((b.x - a.x) * (a.y - p.y) - (a.x - p.x) * (b.y - a.y)) / laenge;
+  }
+
+  // Findet die Ecken einer Linie: alles, was fast gerade ist, wird ganz gerade.
+  // (Der Trick heisst "Ramer-Douglas-Peucker".)
+  function eckenFinden(punkte, toleranz) {
+    if (punkte.length < 3) return punkte.slice();
+    const a = punkte[0];
+    const b = punkte[punkte.length - 1];
+    let weitester = 0;
+    let nummer = 0;
+    for (let i = 1; i < punkte.length - 1; i++) {
+      const d = abstandZurLinie(punkte[i], a, b);
+      if (d > weitester) { weitester = d; nummer = i; }
+    }
+    if (weitester <= toleranz) return [a, b];
+    const links = eckenFinden(punkte.slice(0, nummer + 1), toleranz);
+    const rechts = eckenFinden(punkte.slice(nummer), toleranz);
+    return links.slice(0, -1).concat(rechts);
+  }
+
+  // Räumt die Ecken einer geschlossenen Form auf: Ecken, die zu nah
+  // beieinander liegen oder eigentlich auf einer geraden Kante sitzen, fallen weg
+  function eckenAufraeumen(ecken, toleranz) {
+    let geaendert = true;
+    while (geaendert && ecken.length > 3) {
+      geaendert = false;
+      for (let i = 0; i < ecken.length; i++) {
+        const vorher = ecken[(i - 1 + ecken.length) % ecken.length];
+        const nachher = ecken[(i + 1) % ecken.length];
+        if (abstand(ecken[i], nachher) < toleranz || abstandZurLinie(ecken[i], vorher, nachher) < toleranz * 0.6) {
+          ecken.splice(i, 1);
+          geaendert = true;
+          break;
+        }
+      }
+    }
+    return ecken;
+  }
+
+  function formPerfektMachen() {
+    if (!zeichneGerade || radiertGerade || strichPunkte.length < 5) return;
+
+    // Wie gross ist die Form?
+    const xs = strichPunkte.map((p) => p.x);
+    const ys = strichPunkte.map((p) => p.y);
+    const links = Math.min(...xs), rechts = Math.max(...xs);
+    const oben = Math.min(...ys), unten = Math.max(...ys);
+    const groesse = Math.hypot(rechts - links, unten - oben);
+    if (groesse < 25) return; // zu klein, das war nur ein Tupfer
+
+    const start = strichPunkte[0];
+    const ende = strichPunkte[strichPunkte.length - 1];
+    const geschlossen = abstand(start, ende) < groesse * 0.2;
+
+    // Das Blatt zurück auf den Stand vor dieser Linie bringen ...
+    pinsel.putImageData(verlauf[verlauf.length - 1].bild, 0, 0);
+    // ... und die perfekte Form zeichnen
+    pinsel.beginPath();
+
+    if (!geschlossen) {
+      // Offene Linie: gerade Stücke von Ecke zu Ecke
+      const ecken = eckenFinden(strichPunkte, groesse * 0.06);
+      pinsel.moveTo(ecken[0].x, ecken[0].y);
+      ecken.slice(1).forEach((p) => pinsel.lineTo(p.x, p.y));
+    } else {
+      const mitteX = (links + rechts) / 2;
+      const mitteY = (oben + unten) / 2;
+      const halbBreit = Math.max(1, (rechts - links) / 2);
+      const halbHoch = Math.max(1, (unten - oben) / 2);
+      // Wie gut passt die Linie auf ein Oval? 0 heisst: perfekt
+      const ovalFehler = strichPunkte.reduce((summe, p) =>
+        summe + Math.abs(Math.hypot((p.x - mitteX) / halbBreit, (p.y - mitteY) / halbHoch) - 1), 0) / strichPunkte.length;
+      const ecken = eckenAufraeumen(eckenFinden(strichPunkte, groesse * 0.08).slice(0, -1), groesse * 0.08);
+
+      if (ovalFehler < 0.1 || ecken.length < 3) {
+        // Rund: fast gleich breit wie hoch wird ein Kreis, sonst ein Oval
+        const fastRund = Math.abs(halbBreit - halbHoch) < Math.max(halbBreit, halbHoch) * 0.15;
+        const r = (halbBreit + halbHoch) / 2;
+        pinsel.ellipse(mitteX, mitteY, fastRund ? r : halbBreit, fastRund ? r : halbHoch, 0, 0, Math.PI * 2);
+      } else {
+        // Eckig: ein Viereck, das fast gerade steht, wird ein gerades Rechteck
+        const geradeKanten = ecken.length === 4 && ecken.every((p, i) => {
+          const q = ecken[(i + 1) % 4];
+          const winkel = Math.abs(Math.atan2(q.y - p.y, q.x - p.x)) % (Math.PI / 2);
+          return winkel < 0.2 || winkel > Math.PI / 2 - 0.2;
+        });
+        if (geradeKanten) {
+          pinsel.rect(links, oben, rechts - links, unten - oben);
+        } else {
+          pinsel.moveTo(ecken[0].x, ecken[0].y);
+          ecken.slice(1).forEach((p) => pinsel.lineTo(p.x, p.y));
+          pinsel.closePath();
+        }
+      }
+    }
+    pinsel.stroke();
+
+    // Fertig: weitere Bewegungen zeichnen nichts mehr dazu
+    zeichneGerade = false;
+    pinsel.shadowBlur = 0;
+    if (navigator.vibrate) navigator.vibrate(15); // kurzes Summen als Zeichen
+  }
 
   // ===== 4. Farbtöpfchen =====
   // Für jede Farbe in der Liste machen wir einen runden Knopf.
