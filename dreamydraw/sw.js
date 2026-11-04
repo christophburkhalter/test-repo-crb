@@ -1,7 +1,7 @@
 // Der "Service Worker" merkt sich die App, damit sie auch ohne Internet startet.
 // Er holt immer zuerst die neuste Version aus dem Internet. Klappt das nicht
 // (z.B. kein Empfang auf der Piste), nimmt er die gespeicherte Kopie.
-const ZWISCHENSPEICHER = "dreamydraw-v1";
+const ZWISCHENSPEICHER = "dreamydraw-v2";
 const DATEIEN = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", (ereignis) => {

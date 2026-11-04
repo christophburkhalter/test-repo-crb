@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>DreamyDraw</title>
-<meta name="theme-color" content="#FBF8F3">
+<meta name="theme-color" content="#F7F3EC">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="DreamyDraw">
 <link rel="manifest" href="manifest.webmanifest">
@@ -16,20 +16,20 @@
 <style>
   /* Layout: eine App über den ganzen Bildschirm – oben der Name, in der Mitte das Blatt, unten die Knöpfe */
   :root {
-    /* Noras Pastellfarben */
-    --lavendel: #CDB4F0;
-    --himmelblau: #A9D6F5;
-    --mint: #B5E8C8;
-    --vanille: #FDF1A8;
-    --pfirsich: #FFD3A8;
-    --koralle: #F8B4B4;
-    --rosa: #F9C6E0;
+    /* Noras sanfte Erdtöne */
+    --pflaume: #DCCDD9;
+    --taubenblau: #C6D4DC;
+    --salbei: #D0D9C0;
+    --sand: #EBDAB2;
+    --terrakotta: #E7C3A8;
+    --ziegel: #DDB1A7;
+    --altrosa: #EAD2CC;
 
     /* Grundfarben der App */
-    --hintergrund: #FBF8F3;  /* helles Creme-Weiss */
+    --hintergrund: #F7F3EC;  /* helles Leinen */
     --papier: #FFFFFF;       /* das Zeichenblatt */
-    --text: #4A3F5C;         /* dunkles Violett-Grau für Schrift */
-    --stift: #9B7FD6;        /* die Farbe, mit der man zeichnet */
+    --text: #4B3F37;         /* dunkles Erdbraun für Schrift */
+    --stift: #A8735A;        /* Akzentfarbe für Rahmen und Fokus */
 
     --schrift-titel: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
     --schrift-text: "Nunito", system-ui, sans-serif;
@@ -80,7 +80,7 @@
     height: 40px;
     border-radius: 50%;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(155, 127, 214, 0.3);
+    box-shadow: 0 2px 8px rgba(168, 115, 90, 0.3);
   }
   .logo svg, .logo img {
     display: block;
@@ -126,8 +126,8 @@
     font-weight: 500;
     font-size: 1rem;
     color: var(--text);
-    background: var(--mint);
-    border: 2px solid var(--mint);
+    background: var(--salbei);
+    border: 2px solid var(--salbei);
     border-radius: 99px;
     width: 40px;
     height: 40px;
@@ -135,15 +135,15 @@
     cursor: pointer;
   }
   #speichern {
-    background: var(--rosa);
-    border-color: var(--rosa);
+    background: var(--altrosa);
+    border-color: var(--altrosa);
   }
   #galerie {
-    background: var(--himmelblau);
-    border-color: var(--himmelblau);
+    background: var(--taubenblau);
+    border-color: var(--taubenblau);
   }
   #vorlagen.aktiv, #galerie.aktiv, #speichern.aktiv {
-    background: var(--lavendel);
+    background: var(--pflaume);
     border-color: var(--text);
   }
 
@@ -153,7 +153,7 @@
     min-height: 0;
     background: var(--papier);
     border-radius: 20px;
-    box-shadow: 0 4px 18px rgba(155, 127, 214, 0.18);
+    box-shadow: 0 4px 18px rgba(168, 115, 90, 0.18);
     overflow: hidden;
     position: relative; /* damit das Text-Fenster oben aufs Blatt passt */
   }
@@ -170,7 +170,7 @@
     padding: 12px;
     background: var(--hintergrund);
     border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(74, 63, 92, 0.15);
+    box-shadow: 0 2px 12px rgba(75, 63, 55, 0.15);
   }
   .textpanel input {
     font-family: var(--schrift-text);
@@ -178,7 +178,7 @@
     color: var(--text);
     background: var(--papier);
     padding: 10px 14px;
-    border: 2px solid var(--lavendel);
+    border: 2px solid var(--pflaume);
     border-radius: 12px;
   }
   .textpanel input:focus {
@@ -214,7 +214,7 @@
     background: var(--papier);
     border: 2px solid transparent;
     border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(74, 63, 92, 0.15);
+    box-shadow: 0 1px 4px rgba(75, 63, 55, 0.15);
     color: var(--text);
     font-family: var(--schrift-text);
     font-size: 0.75rem;
@@ -242,15 +242,15 @@
     font-weight: 500;
     font-size: 1.05rem;
     color: var(--text);
-    background: var(--rosa);
-    border: 2px solid var(--rosa);
+    background: var(--altrosa);
+    border: 2px solid var(--altrosa);
     border-radius: 99px;
     padding: 10px 18px;
     cursor: pointer;
   }
   .gross-knopf.hell {
     background: var(--papier);
-    border-color: var(--lavendel);
+    border-color: var(--pflaume);
   }
   .gross-knopf:disabled {
     opacity: 0.5;
@@ -269,7 +269,7 @@
     background: var(--papier);
     border: 2px solid transparent;
     border-radius: 12px;
-    box-shadow: 0 1px 4px rgba(74, 63, 92, 0.15);
+    box-shadow: 0 1px 4px rgba(75, 63, 55, 0.15);
     cursor: pointer;
   }
   .galerie-kachel:hover { border-color: var(--stift); }
@@ -315,7 +315,7 @@
     cursor: pointer;
   }
   .sticker.aktiv {
-    background: var(--lavendel);
+    background: var(--pflaume);
     border-color: var(--text);
   }
   .schriften {
@@ -327,13 +327,13 @@
     font-size: 1.05rem;
     color: var(--text);
     background: var(--papier);
-    border: 2px solid var(--lavendel);
+    border: 2px solid var(--pflaume);
     border-radius: 99px;
     padding: 4px 14px;
     cursor: pointer;
   }
   .schrift.aktiv {
-    background: var(--lavendel);
+    background: var(--pflaume);
     border-color: var(--text);
   }
 
@@ -370,7 +370,7 @@
     height: 34px;
     border-radius: 50%;
     border: 3px solid var(--papier);
-    box-shadow: 0 1px 4px rgba(74, 63, 92, 0.2);
+    box-shadow: 0 1px 4px rgba(75, 63, 55, 0.2);
     padding: 0;
     cursor: pointer;
   }
@@ -385,7 +385,7 @@
     height: 36px;
     border-radius: 50%;
     background: var(--papier);
-    border: 2px solid var(--lavendel);
+    border: 2px solid var(--pflaume);
     padding: 0;
     display: grid;
     place-items: center;
@@ -397,7 +397,7 @@
     background: var(--text);
   }
   .dicke.aktiv, .werkzeug.aktiv {
-    background: var(--lavendel);
+    background: var(--pflaume);
     border-color: var(--text);
   }
   .werkzeug {
@@ -406,8 +406,8 @@
   }
 
   #neu {
-    background: var(--rosa);
-    border-color: var(--rosa);
+    background: var(--altrosa);
+    border-color: var(--altrosa);
   }
   button:active { transform: scale(0.96); }
   .farbe.aktiv:active { transform: scale(1.1); }
@@ -424,9 +424,9 @@
         <svg viewBox="0 0 40 40" aria-hidden="true">
           <defs>
             <linearGradient id="logo-verlauf" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#CDB4F0"/>
-              <stop offset="0.5" stop-color="#F9C6E0"/>
-              <stop offset="1" stop-color="#FFD3A8"/>
+              <stop offset="0" stop-color="#DCCDD9"/>
+              <stop offset="0.5" stop-color="#EAD2CC"/>
+              <stop offset="1" stop-color="#E7C3A8"/>
             </linearGradient>
           </defs>
           <circle cx="20" cy="20" r="20" fill="url(#logo-verlauf)"/>
@@ -436,8 +436,8 @@
             <circle cx="27.5" cy="24.5" r="5.5"/>
             <rect x="14.5" y="23" width="13" height="7"/>
           </g>
-          <path d="M15.5 25.5 q2.8 -3 5.6 0 t5.6 0" stroke="#9B7FD6" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-          <path d="M30 6 L31.3 9.7 L35 11 L31.3 12.3 L30 16 L28.7 12.3 L25 11 L28.7 9.7 Z" fill="#FDF1A8" stroke="#F2D95C" stroke-width="0.6"/>
+          <path d="M15.5 25.5 q2.8 -3 5.6 0 t5.6 0" stroke="#A8735A" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M30 6 L31.3 9.7 L35 11 L31.3 12.3 L30 16 L28.7 12.3 L25 11 L28.7 9.7 Z" fill="#EBDAB2" stroke="#CDA45E" stroke-width="0.6"/>
         </svg>
       </div>
       <h1>DreamyDraw</h1>
@@ -449,13 +449,13 @@
     </div>
   </div>
   <div class="regenbogen" aria-hidden="true">
-    <span style="background: var(--lavendel)"></span>
-    <span style="background: var(--himmelblau)"></span>
-    <span style="background: var(--mint)"></span>
-    <span style="background: var(--vanille)"></span>
-    <span style="background: var(--pfirsich)"></span>
-    <span style="background: var(--koralle)"></span>
-    <span style="background: var(--rosa)"></span>
+    <span style="background: var(--pflaume)"></span>
+    <span style="background: var(--taubenblau)"></span>
+    <span style="background: var(--salbei)"></span>
+    <span style="background: var(--sand)"></span>
+    <span style="background: var(--terrakotta)"></span>
+    <span style="background: var(--ziegel)"></span>
+    <span style="background: var(--altrosa)"></span>
   </div>
 </header>
 
