@@ -401,8 +401,8 @@
 
   /* Die Farbtöpfchen */
   .farbe {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     border: 3px solid var(--papier);
     box-shadow: 0 1px 4px rgba(75, 63, 55, 0.2);
@@ -413,6 +413,9 @@
     transform: scale(1.15);
     box-shadow: 0 0 0 3px var(--text);
   }
+  /* Das weisse Töpfchen bekommt einen feinen Rand, sonst sieht man es kaum */
+  .farbe.weiss { box-shadow: inset 0 0 0 1px rgba(75, 63, 55, 0.25), 0 1px 4px rgba(75, 63, 55, 0.2); }
+  .farbe.weiss.aktiv { box-shadow: inset 0 0 0 1px rgba(75, 63, 55, 0.25), 0 0 0 3px var(--text); }
 
   /* Die Pinseldicken und die Werkzeuge (Radierer, Rückgängig) */
   .dicke, .werkzeug {
@@ -664,9 +667,11 @@
   let stil = stile.erdton;     // der Style, der gerade aktiv ist
   const hell = { ...stil.hell }; // die hellen Farben des aktiven Styles
 
-  // Die Farbtöpfchen: die 7 Farben des Styles und die Tinte
+  // Die Farbtöpfchen: die 7 Farben des Styles, Weiss und die Tinte.
+  // Weiss und Tinte sind in jedem Style gleich.
+  const weiss = "#FFFFFF";
   function farbenListe() {
-    return [...stil.zeichnen, { name: "Tinte", wert: tinte }];
+    return [...stil.zeichnen, { name: "Weiss", wert: weiss }, { name: "Tinte", wert: tinte }];
   }
 
   // Was gerade ausgewählt ist
@@ -1499,6 +1504,7 @@
       const knopf = document.createElement("button");
       knopf.type = "button";
       knopf.className = "farbe";
+      if (farbe.wert === weiss) knopf.classList.add("weiss");
       if (farbe.wert === aktuelleFarbe && !radiertGerade) knopf.classList.add("aktiv");
       knopf.style.background = farbe.wert;
       knopf.dataset.wert = farbe.wert;
