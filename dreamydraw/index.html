@@ -634,24 +634,25 @@
     },
     neon: {
       name: "Neon",
+      leuchten: true, // Linien bekommen einen Leuchtschein wie bei Leuchtstiften
       zeichnen: [
-        { name: "Neonlila",   wert: "#A63CFF" },
-        { name: "Neonblau",   wert: "#00A6FF" },
-        { name: "Neongrün",   wert: "#19D94A" },
-        { name: "Neongelb",   wert: "#E8E000" },
-        { name: "Neonorange", wert: "#FF8A00" },
-        { name: "Neonrot",    wert: "#FF2D55" },
-        { name: "Neonpink",   wert: "#FF2BC6" }
+        { name: "Neonlila",   wert: "#BC13FE" },
+        { name: "Neonblau",   wert: "#00E5FF" },
+        { name: "Neongrün",   wert: "#39FF14" },
+        { name: "Neongelb",   wert: "#FFF000" },
+        { name: "Neonorange", wert: "#FF6A00" },
+        { name: "Neonrot",    wert: "#FF073A" },
+        { name: "Neonpink",   wert: "#FF10F0" }
       ],
       hell: {
-        violett: "#E6C8FF", blau: "#BDEBFF", gruen: "#C2FACF", gelb: "#FBFAA8",
-        orange: "#FFDCB3", rot: "#FFC4CE", pink: "#FFC7F0"
+        violett: "#E3A6FF", blau: "#9CF6FF", gruen: "#B4FF9A", gelb: "#FFFF8A",
+        orange: "#FFB27A", rot: "#FF8FA6", pink: "#FF9BF5"
       },
       namen: { violett: "Lila", gruen: "Grün", pink: "Pink", gelb: "Gelb", orange: "Orange" },
       design: {
-        hintergrund: "#FAF8FF", text: "#2C2340", stift: "#FF2BC6",
-        logo: ["#A63CFF", "#FF2BC6", "#FF8A00"], sternRand: "#E8E000",
-        hellerHimmel: "#F2FBFF", wolkenHimmel: "#DDF4FF"
+        hintergrund: "#FCFAFF", text: "#1E1530", stift: "#FF10F0",
+        logo: ["#BC13FE", "#FF10F0", "#FF6A00"], sternRand: "#FF6A00",
+        hellerHimmel: "#EFFFFF", wolkenHimmel: "#CCFBFF"
       }
     }
   };
@@ -1285,6 +1286,15 @@
 
   // ===== 3. Zeichnen mit dem Finger (oder der Maus) =====
   let zeichneGerade = false;
+  let letzterPunkt = null; // hier war der Finger zuletzt
+
+  // Im Neon-Style leuchten die Linien wie Leuchtstifte.
+  // Beim Radieren und mit der Tinte gibt es keinen Leuchtschein.
+  function leuchtenSetzen() {
+    const leuchtet = stil.leuchten && !radiertGerade && aktuelleFarbe !== tinte;
+    pinsel.shadowColor = aktuelleFarbe;
+    pinsel.shadowBlur = leuchtet ? aktuelleDicke * 1.5 * (window.devicePixelRatio || 1) : 0;
+  }
 
   // Rechnet aus, wo genau auf dem Blatt der Finger ist
   function position(ereignis) {
@@ -1310,23 +1320,33 @@
     zeichneGerade = true;
     canvas.setPointerCapture(ereignis.pointerId);
     merken(); // Foto machen, bevor die neue Linie dazukommt
+    leuchtenSetzen();
     const p = position(ereignis);
     pinsel.beginPath();
     pinsel.moveTo(p.x, p.y);
     pinsel.lineTo(p.x, p.y); // damit auch ein einzelner Tupfer sichtbar ist
     pinsel.stroke();
+    letzterPunkt = p;
   });
 
   // Finger bewegt sich: Linie weiterzeichnen
   canvas.addEventListener("pointermove", (ereignis) => {
     if (!zeichneGerade) return;
+    // Immer nur das neue Stückchen zeichnen, vom letzten Punkt bis hierher
     const p = position(ereignis);
+    pinsel.beginPath();
+    pinsel.moveTo(letzterPunkt.x, letzterPunkt.y);
     pinsel.lineTo(p.x, p.y);
     pinsel.stroke();
+    letzterPunkt = p;
   });
 
-  // Finger hebt ab: Linie fertig
-  function aufhoeren() { zeichneGerade = false; }
+  // Finger hebt ab: Linie fertig. Den Leuchtschein wieder ausschalten,
+  // damit Text und Sticker nicht leuchten.
+  function aufhoeren() {
+    zeichneGerade = false;
+    pinsel.shadowBlur = 0;
+  }
   canvas.addEventListener("pointerup", aufhoeren);
   canvas.addEventListener("pointercancel", aufhoeren);
 
