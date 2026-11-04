@@ -435,10 +435,11 @@
   .farbe.weiss { box-shadow: inset 0 0 0 1px rgba(75, 63, 55, 0.25), 0 1px 4px rgba(75, 63, 55, 0.2); }
   .farbe.weiss.aktiv { box-shadow: inset 0 0 0 1px rgba(75, 63, 55, 0.25), 0 0 0 3px var(--text); }
 
-  /* Die Pinseldicken und die Werkzeuge (Radierer, Rückgängig) */
+  /* Die Pinseldicken und die Werkzeuge (Radierer, Rückgängig, Wiederholen) */
+  .werkzeuge { gap: 4px; } /* 9 Knöpfe müssen nebeneinander passen */
   .dicke, .werkzeug {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     background: var(--papier);
     border: 2px solid var(--violett);
@@ -446,6 +447,11 @@
     display: grid;
     place-items: center;
     cursor: pointer;
+  }
+  /* Nichts zum Zurück- oder Vorholen: Knopf blass */
+  .werkzeug:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
   .dicke span {
     display: block;
@@ -585,17 +591,18 @@
   <!-- Die Farbtöpfchen werden im JavaScript hier eingefüllt -->
   <div class="reihe" id="farben"></div>
 
-  <div class="reihe">
+  <div class="reihe werkzeuge">
     <!-- Drei Pinseldicken: dünn, mittel, dick -->
     <button class="dicke" type="button" data-dicke="3" aria-label="Dünner Pinsel"><span style="width: 4px; height: 4px"></span></button>
     <button class="dicke aktiv" type="button" data-dicke="8" aria-label="Mittlerer Pinsel"><span style="width: 9px; height: 9px"></span></button>
     <button class="dicke" type="button" data-dicke="18" aria-label="Dicker Pinsel"><span style="width: 17px; height: 17px"></span></button>
 
-    <!-- Sticker, Text, Radierer und Rückgängig -->
+    <!-- Sticker, Text, Radierer, Rückgängig und Wiederholen -->
     <button class="werkzeug" id="sticker" type="button" aria-label="Sticker" title="Sticker">🌸</button>
     <button class="werkzeug" id="text" type="button" aria-label="Text" title="Text">🔤</button>
     <button class="werkzeug" id="radierer" type="button" aria-label="Radierer" title="Radierer">🧽</button>
     <button class="werkzeug" id="zurueck" type="button" aria-label="Rückgängig" title="Rückgängig">↩️</button>
+    <button class="werkzeug" id="vor" type="button" aria-label="Wiederholen" title="Wiederholen">↪️</button>
 
     <button class="werkzeug" id="neu" type="button" aria-label="Neues Blatt" title="Neues Blatt">🧻</button>
   </div>
@@ -1251,16 +1258,33 @@
 
   // Das Gedächtnis für "Rückgängig": eine Liste von Fotos des Blatts
   const verlauf = [];
+  // Und für "Wiederholen": was man mit Rückgängig weggenommen hat
+  const zukunft = [];
+  const zurueckKnopf = document.getElementById("zurueck");
+  const vorKnopf = document.getElementById("vor");
 
-  // Macht ein "Foto" vom Blatt und legt es ins Gedächtnis
-  function merken() {
-    // Wir merken uns die Zeichnung UND welcher Hintergrund gerade da ist
-    verlauf.push({
+  // Ein "Foto" vom Blatt: die Zeichnung UND welcher Hintergrund gerade da ist
+  function fotoVonJetzt() {
+    return {
       bild: pinsel.getImageData(0, 0, canvas.width, canvas.height),
       hintergrund: aktuellerHintergrund
-    });
+    };
+  }
+
+  // Macht ein Foto vom Blatt und legt es ins Gedächtnis
+  function merken() {
+    verlauf.push(fotoVonJetzt());
     // Nur die letzten 30 Fotos behalten, sonst wird das Handy langsam
     if (verlauf.length > 30) verlauf.shift();
+    // Wer etwas Neues macht, kann das Weggenommene nicht mehr wiederholen
+    zukunft.length = 0;
+    rueckgaengigKnoepfeZeigen();
+  }
+
+  // Graut die Knöpfe aus, wenn es nichts zurück- oder vorzuholen gibt
+  function rueckgaengigKnoepfeZeigen() {
+    zurueckKnopf.disabled = verlauf.length === 0;
+    vorKnopf.disabled = zukunft.length === 0;
   }
 
   // ===== 2. Blatt auf die richtige Grösse bringen =====
@@ -1311,6 +1335,8 @@
 
     // Alte Fotos passen nicht mehr zur neuen Grösse
     verlauf.length = 0;
+    zukunft.length = 0;
+    rueckgaengigKnoepfeZeigen();
   }
   blattAnpassen();
 
@@ -1448,6 +1474,7 @@
       pinsel.shadowBlur = 0;
       const vorher = verlauf.pop();
       if (vorher) pinsel.putImageData(vorher.bild, 0, 0);
+      rueckgaengigKnoepfeZeigen();
     }
     zoomStart = { ...zweiFinger(), zoom, verschiebungX, verschiebungY };
   }
@@ -1954,16 +1981,31 @@
     stilWahl.appendChild(knopf);
   });
 
-  // ===== 10. Rückgängig =====
-  document.getElementById("zurueck").addEventListener("click", () => {
-    const letztesFoto = verlauf.pop(); // das neuste Foto herausnehmen
-    if (!letztesFoto) return;
-    pinsel.putImageData(letztesFoto.bild, 0, 0);
-    // Falls sich der Hintergrund geändert hat, den alten zurückholen
-    if (letztesFoto.hintergrund !== aktuellerHintergrund) {
-      aktuellerHintergrund = letztesFoto.hintergrund;
+  // ===== 10. Rückgängig und Wiederholen =====
+  // Zeigt ein Foto aus dem Gedächtnis wieder auf dem Blatt
+  function fotoZeigen(foto) {
+    pinsel.putImageData(foto.bild, 0, 0);
+    // Falls sich der Hintergrund geändert hat, den richtigen zurückholen
+    if (foto.hintergrund !== aktuellerHintergrund) {
+      aktuellerHintergrund = foto.hintergrund;
       hintergrundMalen();
     }
+  }
+
+  zurueckKnopf.addEventListener("click", () => {
+    const letztesFoto = verlauf.pop(); // das neuste Foto herausnehmen
+    if (!letztesFoto) return;
+    zukunft.push(fotoVonJetzt()); // so wie es jetzt ist, für "Wiederholen"
+    fotoZeigen(letztesFoto);
+    rueckgaengigKnoepfeZeigen();
+  });
+
+  vorKnopf.addEventListener("click", () => {
+    const naechstesFoto = zukunft.pop();
+    if (!naechstesFoto) return;
+    verlauf.push(fotoVonJetzt()); // so wie es jetzt ist, für "Rückgängig"
+    fotoZeigen(naechstesFoto);
+    rueckgaengigKnoepfeZeigen();
   });
 
   // ===== 11. Knopf "Neues Blatt" =====
