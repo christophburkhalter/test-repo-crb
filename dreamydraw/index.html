@@ -1,0 +1,1544 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DreamyDraw</title>
+<meta name="theme-color" content="#FBF8F3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DreamyDraw">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Caveat:wght@600&family=Pacifico&family=Nunito:wght@400;700&display=swap">
+
+<style>
+  /* Layout: eine App über den ganzen Bildschirm – oben der Name, in der Mitte das Blatt, unten die Knöpfe */
+  :root {
+    /* Noras Pastellfarben */
+    --lavendel: #CDB4F0;
+    --himmelblau: #A9D6F5;
+    --mint: #B5E8C8;
+    --vanille: #FDF1A8;
+    --pfirsich: #FFD3A8;
+    --koralle: #F8B4B4;
+    --rosa: #F9C6E0;
+
+    /* Grundfarben der App */
+    --hintergrund: #FBF8F3;  /* helles Creme-Weiss */
+    --papier: #FFFFFF;       /* das Zeichenblatt */
+    --text: #4A3F5C;         /* dunkles Violett-Grau für Schrift */
+    --stift: #9B7FD6;        /* die Farbe, mit der man zeichnet */
+
+    --schrift-titel: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+    --schrift-text: "Nunito", system-ui, sans-serif;
+    color-scheme: light;
+  }
+
+  /* Grundeinstellungen (Rand vom iPhone, versteckte Dinge) */
+  html {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; overscroll-behavior: none; }
+  [hidden] { display: none !important; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--hintergrund);
+    color: var(--text);
+    font-family: var(--schrift-text);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-block: 12px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
+  }
+
+  /* ---------- Kopfzeile ---------- */
+  header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* Logo und App-Name */
+  .marke {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .logo {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(155, 127, 214, 0.3);
+  }
+  .logo svg, .logo img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  h1 {
+    font-family: "Pacifico", var(--schrift-titel);
+    font-weight: 400;
+    font-size: 1.35rem;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Der Regenbogen-Streifen unter dem Namen */
+  .regenbogen {
+    display: flex;
+    height: 8px;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .regenbogen span { flex: 1; }
+
+  .kopf-reihe {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .kopf-knoepfe {
+    display: flex;
+    flex: none;
+    gap: 6px;
+  }
+
+  #vorlagen, #galerie, #speichern {
+    font-family: var(--schrift-titel);
+    font-weight: 500;
+    font-size: 1rem;
+    color: var(--text);
+    background: var(--mint);
+    border: 2px solid var(--mint);
+    border-radius: 99px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    cursor: pointer;
+  }
+  #speichern {
+    background: var(--rosa);
+    border-color: var(--rosa);
+  }
+  #galerie {
+    background: var(--himmelblau);
+    border-color: var(--himmelblau);
+  }
+  #vorlagen.aktiv, #galerie.aktiv, #speichern.aktiv {
+    background: var(--lavendel);
+    border-color: var(--text);
+  }
+
+  /* ---------- Zeichenblatt ---------- */
+  .blatt {
+    flex: 1;
+    min-height: 0;
+    background: var(--papier);
+    border-radius: 20px;
+    box-shadow: 0 4px 18px rgba(155, 127, 214, 0.18);
+    overflow: hidden;
+    position: relative; /* damit das Text-Fenster oben aufs Blatt passt */
+  }
+
+  /* ---------- Text-Fenster und Sticker-Fenster ---------- */
+  .textpanel, .stickerpanel, .vorlagenpanel, .speicherpanel, .galeriepanel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: var(--hintergrund);
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(74, 63, 92, 0.15);
+  }
+  .textpanel input {
+    font-family: var(--schrift-text);
+    font-size: 1rem; /* 16px, sonst zoomt das iPhone beim Tippen */
+    color: var(--text);
+    background: var(--papier);
+    padding: 10px 14px;
+    border: 2px solid var(--lavendel);
+    border-radius: 12px;
+  }
+  .textpanel input:focus {
+    outline: none;
+    border-color: var(--stift);
+  }
+  .textpanel p, .stickerpanel p, .speicherpanel p, .galeriepanel p {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+
+  /* Das Vorlagen-Fenster ist so hoch wie das Blatt und scrollt */
+  .vorlagenpanel, .speicherpanel, .galeriepanel {
+    bottom: 10px;
+    overflow-y: auto;
+  }
+  .vorlagenpanel h2, .speicherpanel h2, .galeriepanel h2 {
+    font-family: var(--schrift-titel);
+    font-weight: 500;
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  .kachel-raster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 8px;
+  }
+  .kachel {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    background: var(--papier);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(74, 63, 92, 0.15);
+    color: var(--text);
+    font-family: var(--schrift-text);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .kachel:hover { border-color: var(--stift); }
+  .kachel canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;
+  }
+  .kachel span { padding: 3px 2px 5px; }
+
+  /* ---------- Speichern-Fenster ---------- */
+  .speicherpanel img {
+    flex: 1;
+    min-height: 140px;
+    width: 100%;
+    object-fit: contain;
+    -webkit-touch-callout: default; /* lange drücken zum Sichern erlauben */
+  }
+  .gross-knopf {
+    font-family: var(--schrift-titel);
+    font-weight: 500;
+    font-size: 1.05rem;
+    color: var(--text);
+    background: var(--rosa);
+    border: 2px solid var(--rosa);
+    border-radius: 99px;
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+  .gross-knopf.hell {
+    background: var(--papier);
+    border-color: var(--lavendel);
+  }
+  .gross-knopf:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  /* ---------- Galerie ---------- */
+  .galerie-raster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+  }
+  .galerie-kachel {
+    padding: 0;
+    overflow: hidden;
+    background: var(--papier);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(74, 63, 92, 0.15);
+    cursor: pointer;
+  }
+  .galerie-kachel:hover { border-color: var(--stift); }
+  .galerie-kachel img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+  }
+  .galerie-detail {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .galerie-detail img {
+    flex: 1;
+    min-height: 140px;
+    width: 100%;
+    object-fit: contain;
+  }
+  .knopf-reihe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Das Raster mit allen Stickern */
+  .sticker-raster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 4px;
+  }
+  .sticker {
+    height: 44px;
+    font-size: 1.6rem;
+    line-height: 1;
+    padding: 0;
+    background: var(--papier);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  .sticker.aktiv {
+    background: var(--lavendel);
+    border-color: var(--text);
+  }
+  .schriften {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .schrift {
+    font-size: 1.05rem;
+    color: var(--text);
+    background: var(--papier);
+    border: 2px solid var(--lavendel);
+    border-radius: 99px;
+    padding: 4px 14px;
+    cursor: pointer;
+  }
+  .schrift.aktiv {
+    background: var(--lavendel);
+    border-color: var(--text);
+  }
+
+  /* Zwei Blätter übereinander: unten der Hintergrund, oben die Zeichnung */
+  .blatt > canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none; /* verhindert, dass die Seite beim Zeichnen scrollt */
+    cursor: crosshair;
+  }
+  #hintergrund-ebene { pointer-events: none; }
+
+  /* ---------- Werkzeuge unten ---------- */
+  footer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .reihe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Die Farbtöpfchen */
+  .farbe {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid var(--papier);
+    box-shadow: 0 1px 4px rgba(74, 63, 92, 0.2);
+    padding: 0;
+    cursor: pointer;
+  }
+  .farbe.aktiv {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 3px var(--text);
+  }
+
+  /* Die Pinseldicken und die Werkzeuge (Radierer, Rückgängig) */
+  .dicke, .werkzeug {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--papier);
+    border: 2px solid var(--lavendel);
+    padding: 0;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .dicke span {
+    display: block;
+    border-radius: 50%;
+    background: var(--text);
+  }
+  .dicke.aktiv, .werkzeug.aktiv {
+    background: var(--lavendel);
+    border-color: var(--text);
+  }
+  .werkzeug {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  #neu {
+    background: var(--rosa);
+    border-color: var(--rosa);
+  }
+  button:active { transform: scale(0.96); }
+  .farbe.aktiv:active { transform: scale(1.1); }
+  button:focus-visible { outline: 3px solid var(--stift); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="kopf-reihe">
+    <div class="marke">
+      <!-- Das Logo: ein Wölkchen mit Kritzel und Stern -->
+      <div class="logo" id="logo">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <defs>
+            <linearGradient id="logo-verlauf" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#CDB4F0"/>
+              <stop offset="0.5" stop-color="#F9C6E0"/>
+              <stop offset="1" stop-color="#FFD3A8"/>
+            </linearGradient>
+          </defs>
+          <circle cx="20" cy="20" r="20" fill="url(#logo-verlauf)"/>
+          <g fill="#FFFFFF">
+            <circle cx="14.5" cy="24" r="6"/>
+            <circle cx="21" cy="20" r="7.5"/>
+            <circle cx="27.5" cy="24.5" r="5.5"/>
+            <rect x="14.5" y="23" width="13" height="7"/>
+          </g>
+          <path d="M15.5 25.5 q2.8 -3 5.6 0 t5.6 0" stroke="#9B7FD6" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M30 6 L31.3 9.7 L35 11 L31.3 12.3 L30 16 L28.7 12.3 L25 11 L28.7 9.7 Z" fill="#FDF1A8" stroke="#F2D95C" stroke-width="0.6"/>
+        </svg>
+      </div>
+      <h1>DreamyDraw</h1>
+    </div>
+    <div class="kopf-knoepfe">
+      <button id="vorlagen" type="button" aria-label="Vorlagen" title="Vorlagen">🖼️</button>
+      <button id="galerie" type="button" aria-label="Meine Galerie" title="Meine Galerie">📚</button>
+      <button id="speichern" type="button" aria-label="Speichern" title="Speichern">💾</button>
+    </div>
+  </div>
+  <div class="regenbogen" aria-hidden="true">
+    <span style="background: var(--lavendel)"></span>
+    <span style="background: var(--himmelblau)"></span>
+    <span style="background: var(--mint)"></span>
+    <span style="background: var(--vanille)"></span>
+    <span style="background: var(--pfirsich)"></span>
+    <span style="background: var(--koralle)"></span>
+    <span style="background: var(--rosa)"></span>
+  </div>
+</header>
+
+<main class="blatt">
+  <canvas id="hintergrund-ebene"></canvas>
+  <canvas id="zeichenflaeche"></canvas>
+
+  <!-- Das Vorlagen-Fenster: die Kacheln werden im JavaScript eingefüllt -->
+  <div class="vorlagenpanel" id="vorlagenpanel" hidden>
+    <h2>Vorlagen</h2>
+    <div class="kachel-raster" id="vorlagen-raster"></div>
+    <h2>Hintergründe</h2>
+    <div class="kachel-raster" id="hintergrund-raster"></div>
+  </div>
+
+  <!-- Das Speichern-Fenster: zeigt dein fertiges Bild -->
+  <div class="speicherpanel" id="speicherpanel" hidden>
+    <h2>Dein Kunstwerk ✨</h2>
+    <img id="fertiges-bild" alt="Deine fertige Karte">
+    <button class="gross-knopf" id="in-galerie" type="button">📚 In meine Galerie</button>
+    <button class="gross-knopf hell" id="aufs-handy" type="button">📲 Aufs Handy speichern</button>
+    <p id="speicher-info" aria-live="polite"></p>
+    <p>Tipp: Drück lange auf das Bild und wähle «Bild sichern». Dann ist es in deinen Fotos, und du kannst es per WhatsApp verschicken.</p>
+    <button class="gross-knopf hell" id="weiter-malen" type="button">✏️ Weiter malen</button>
+  </div>
+
+  <!-- Die Galerie: alle Karten, die IN der App gespeichert sind -->
+  <div class="galeriepanel" id="galeriepanel" hidden>
+    <h2>Meine Galerie</h2>
+    <p id="galerie-info" aria-live="polite">Galerie wird geladen …</p>
+    <button class="gross-knopf hell" id="logo-zuruecksetzen" type="button" hidden>☁️ Wolken-Logo zurückholen</button>
+    <div class="galerie-raster" id="galerie-raster"></div>
+    <div class="galerie-detail" id="galerie-detail" hidden>
+      <img id="galerie-bild" alt="Gespeicherte Karte">
+      <div class="knopf-reihe">
+        <button class="gross-knopf" id="galerie-bearbeiten" type="button">✏️ Weiter malen</button>
+        <button class="gross-knopf hell" id="als-logo" type="button">⭐ Als Logo</button>
+        <button class="gross-knopf hell" id="galerie-loeschen" type="button">🗑️ Löschen</button>
+        <button class="gross-knopf hell" id="galerie-zurueck" type="button">← Zurück</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Das Text-Fenster: erscheint nur, wenn das Text-Werkzeug an ist -->
+  <div class="textpanel" id="textpanel" hidden>
+    <input id="text-eingabe" type="text" placeholder="Grüsse aus Laax!" maxlength="40" autocomplete="off">
+    <div class="schriften">
+      <button class="schrift aktiv" type="button" data-schrift="Fredoka" style="font-family: Fredoka">Rund</button>
+      <button class="schrift" type="button" data-schrift="Caveat" style="font-family: Caveat">Handschrift</button>
+      <button class="schrift" type="button" data-schrift="Pacifico" style="font-family: Pacifico">Schnörkel</button>
+    </div>
+    <p>Tippe aufs Blatt, wo der Text hin soll.</p>
+  </div>
+
+  <!-- Das Sticker-Fenster: die Sticker werden im JavaScript eingefüllt -->
+  <div class="stickerpanel" id="stickerpanel" hidden>
+    <div class="sticker-raster" id="sticker-raster"></div>
+    <p>Wähle einen Sticker und tippe aufs Blatt.</p>
+  </div>
+</main>
+
+<footer>
+  <!-- Die Farbtöpfchen werden im JavaScript hier eingefüllt -->
+  <div class="reihe" id="farben"></div>
+
+  <div class="reihe">
+    <!-- Drei Pinseldicken: dünn, mittel, dick -->
+    <button class="dicke" type="button" data-dicke="3" aria-label="Dünner Pinsel"><span style="width: 4px; height: 4px"></span></button>
+    <button class="dicke aktiv" type="button" data-dicke="8" aria-label="Mittlerer Pinsel"><span style="width: 9px; height: 9px"></span></button>
+    <button class="dicke" type="button" data-dicke="18" aria-label="Dicker Pinsel"><span style="width: 17px; height: 17px"></span></button>
+
+    <!-- Sticker, Text, Radierer und Rückgängig -->
+    <button class="werkzeug" id="sticker" type="button" aria-label="Sticker" title="Sticker">🌸</button>
+    <button class="werkzeug" id="text" type="button" aria-label="Text" title="Text">🔤</button>
+    <button class="werkzeug" id="radierer" type="button" aria-label="Radierer" title="Radierer">🧽</button>
+    <button class="werkzeug" id="zurueck" type="button" aria-label="Rückgängig" title="Rückgängig">↩️</button>
+
+    <button class="werkzeug" id="neu" type="button" aria-label="Neues Blatt" title="Neues Blatt">🧻</button>
+  </div>
+</footer>
+
+<script>
+  // ===== 1. Die Zeichenfläche holen =====
+  const canvas = document.getElementById("zeichenflaeche");
+  const pinsel = canvas.getContext("2d");
+
+  // Noras Farben zum Zeichnen. Sie sind ein kleines bisschen kräftiger
+  // als die Pastelltöne der App, damit man sie auf dem weissen Blatt gut sieht.
+  const farben = [
+    { name: "Lavendel",   wert: "#B596EA" },
+    { name: "Himmelblau", wert: "#7FC0EE" },
+    { name: "Mint",       wert: "#85D6A6" },
+    { name: "Vanille",    wert: "#F2D95C" },
+    { name: "Pfirsich",   wert: "#FFB877" },
+    { name: "Koralle",    wert: "#F28B8B" },
+    { name: "Rosa",       wert: "#F29AC6" },
+    { name: "Tinte",      wert: "#4A3F5C" }  // dunkel, gut zum Schreiben
+  ];
+
+  // Was gerade ausgewählt ist
+  let aktuelleFarbe = farben[0].wert;
+  let aktuelleDicke = 8;
+  let radiertGerade = false;  // true = der Radierer ist an
+  let textModus = false;      // true = das Text-Werkzeug ist an
+  let aktuelleSchrift = "Fredoka";
+  let stickerModus = false;   // true = das Sticker-Werkzeug ist an
+
+  // Noras aesthetic Sticker
+  const sticker = [
+    "🌿", "🌱", "🪴", "🌵", "🍃", "🌸", "🌼", "🌷", "🍄", "🦋",
+    "🌙", "✨", "⭐", "☁️", "🌈", "🫧", "🐚", "🎀", "🍓", "💌"
+  ];
+  let aktuellerSticker = sticker[0];
+
+  // ===== Hintergrund-Ebene =====
+  // Der Hintergrund liegt auf einem eigenen Blatt UNTER der Zeichnung.
+  // So radiert der Radierer nur deine Zeichnung weg, nie den Hintergrund.
+  const hgCanvas = document.getElementById("hintergrund-ebene");
+  const hgPinsel = hgCanvas.getContext("2d");
+  let breite = 0;  // so breit ist das Blatt
+  let hoehe = 0;   // so hoch ist das Blatt
+
+  const pastell = {
+    lavendel: "#CDB4F0", himmelblau: "#A9D6F5", mint: "#B5E8C8", vanille: "#FDF1A8",
+    pfirsich: "#FFD3A8", koralle: "#F8B4B4", rosa: "#F9C6E0"
+  };
+  const tinte = "#4A3F5C";
+
+  // --- Kleine Helfer zum Malen ---
+  // Alle bekommen "ctx" (den Pinsel), "w" (Breite) und "h" (Höhe).
+  // Positionen rechnen wir in Bruchteilen: w * 0.5 ist immer die Mitte,
+  // egal ob das Blatt gross (Handy) oder winzig (Vorschaubild) ist.
+
+  function einfarbig(farbe) {
+    return (ctx, w, h) => {
+      ctx.fillStyle = farbe;
+      ctx.fillRect(0, 0, w, h);
+    };
+  }
+
+  function farbverlauf(farbListe) {
+    return (ctx, w, h) => {
+      const v = ctx.createLinearGradient(0, 0, 0, h);
+      farbListe.forEach((farbe, i) => v.addColorStop(i / (farbListe.length - 1), farbe));
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, w, h);
+    };
+  }
+
+  function schreiben(ctx, w, text, x, y, groesse, schrift, ausrichtung = "center") {
+    ctx.font = `${groesse}px "${schrift}"`;
+    ctx.fillStyle = tinte;
+    ctx.textAlign = ausrichtung;
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x, y, w * 0.9); // nie breiter als das Blatt
+  }
+
+  function emojiMalen(ctx, emoji, x, y, groesse) {
+    ctx.font = `${groesse}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(emoji, x, y);
+  }
+
+  function linie(ctx, x1, y1, x2, y2, farbe, dicke) {
+    ctx.strokeStyle = farbe;
+    ctx.lineWidth = dicke;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  function wolke(ctx, x, y, r) {
+    ctx.fillStyle = "#FFFFFF";
+    [[0, 0, 1], [-0.9, 0.25, 0.7], [0.9, 0.25, 0.7]].forEach(([dx, dy, f]) => {
+      ctx.beginPath();
+      ctx.arc(x + dx * r, y + dy * r, r * f, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  // Zeilen zum Ausfüllen, z.B. "Wann: ________"
+  function ausfuellZeilen(ctx, w, h, woerter, startY) {
+    const s = Math.min(w, h);
+    woerter.forEach((wort, i) => {
+      const y = h * (startY + i * 0.09);
+      schreiben(ctx, w, wort, w * 0.1, y, s * 0.065, "Fredoka", "left");
+      linie(ctx, w * 0.32, y + s * 0.035, w * 0.9, y + s * 0.035, "rgba(74, 63, 92, 0.4)", Math.max(1, s * 0.005));
+    });
+  }
+
+  // --- Die Hintergründe ---
+  const hintergruende = [
+    { name: "Weiss",    malen: einfarbig("#FFFFFF") },
+    { name: "Lavendel", malen: einfarbig(pastell.lavendel) },
+    { name: "Mint",     malen: einfarbig(pastell.mint) },
+    { name: "Rosa",     malen: einfarbig(pastell.rosa) },
+    { name: "Vanille",  malen: einfarbig(pastell.vanille) },
+    { name: "Pfirsich", malen: einfarbig(pastell.pfirsich) },
+    { name: "Sunset",   malen: farbverlauf([pastell.pfirsich, pastell.rosa, pastell.lavendel]) },
+    { name: "Himmel",   malen: farbverlauf([pastell.himmelblau, "#FFFFFF"]) },
+    {
+      name: "Regenbogen",
+      malen: (ctx, w, h) => {
+        const farbListe = Object.values(pastell);
+        const streifen = h / farbListe.length;
+        farbListe.forEach((farbe, i) => {
+          ctx.fillStyle = farbe;
+          ctx.fillRect(0, i * streifen, w, streifen + 1);
+        });
+      }
+    },
+    {
+      name: "Punkte",
+      malen: (ctx, w, h) => {
+        einfarbig("#FFFFFF")(ctx, w, h);
+        const abstand = w / 10;
+        ctx.fillStyle = pastell.lavendel;
+        for (let y = abstand / 2; y < h; y += abstand) {
+          for (let x = abstand / 2; x < w; x += abstand) {
+            ctx.beginPath();
+            ctx.arc(x, y, abstand / 7, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    },
+    {
+      name: "Kariert",
+      malen: (ctx, w, h) => {
+        einfarbig("#FFFFFF")(ctx, w, h);
+        const abstand = w / 16;
+        for (let x = abstand; x < w; x += abstand) linie(ctx, x, 0, x, h, pastell.himmelblau, 1);
+        for (let y = abstand; y < h; y += abstand) linie(ctx, 0, y, w, y, pastell.himmelblau, 1);
+      }
+    },
+    {
+      name: "Liniert",
+      malen: (ctx, w, h) => {
+        einfarbig("#FFFDF6")(ctx, w, h);
+        const abstand = h / 18;
+        for (let y = abstand * 2; y < h; y += abstand) linie(ctx, 0, y, w, y, pastell.himmelblau, 1);
+        linie(ctx, w * 0.12, 0, w * 0.12, h, pastell.koralle, 1.5);
+      }
+    },
+    {
+      name: "Wolken",
+      malen: (ctx, w, h) => {
+        farbverlauf([pastell.himmelblau, "#E4F2FC"])(ctx, w, h);
+        const s = Math.min(w, h);
+        wolke(ctx, w * 0.25, h * 0.15, s * 0.08);
+        wolke(ctx, w * 0.75, h * 0.35, s * 0.1);
+        wolke(ctx, w * 0.3, h * 0.6, s * 0.07);
+        wolke(ctx, w * 0.7, h * 0.85, s * 0.09);
+      }
+    }
+  ];
+
+  // --- Die Vorlagen ---
+  // Jede Vorlage hat einen Hintergrund und "Elemente" (Text und Sticker).
+  // Die Elemente landen auf deiner Zeichnung: du kannst sie also radieren!
+  const vorlagen = [
+    {
+      name: "Postkarte",
+      hintergrund: (ctx, w, h) => {
+        einfarbig("#FFFDF6")(ctx, w, h);
+        const s = Math.min(w, h);
+        linie(ctx, w * 0.06, h * 0.55, w * 0.94, h * 0.55, pastell.lavendel, 2);
+        // Briefmarke
+        ctx.setLineDash([s * 0.02, s * 0.015]);
+        ctx.strokeStyle = pastell.koralle;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(w * 0.92 - s * 0.22, h * 0.6, s * 0.22, s * 0.27);
+        ctx.setLineDash([]);
+        emojiMalen(ctx, "🌸", w * 0.92 - s * 0.11, h * 0.6 + s * 0.135, s * 0.12);
+        // Zeilen für die Adresse
+        for (let i = 0; i < 3; i++) {
+          const y = h * (0.74 + i * 0.08);
+          linie(ctx, w * 0.06, y, w * 0.6, y, pastell.himmelblau, 2);
+        }
+      },
+      elemente: null
+    },
+    {
+      name: "Hello Winter",
+      hintergrund: farbverlauf([pastell.himmelblau, "#FFFFFF"]),
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        [[0.15, 0.1], [0.8, 0.08], [0.5, 0.15], [0.1, 0.45], [0.88, 0.5], [0.3, 0.55], [0.7, 0.6]]
+          .forEach(([x, y]) => emojiMalen(ctx, "❄️", w * x, h * y, s * 0.08));
+        schreiben(ctx, w, "Hello Winter", w / 2, h * 0.32, s * 0.13, "Pacifico");
+        emojiMalen(ctx, "🏂", w / 2, h * 0.78, s * 0.22);
+      }
+    },
+    {
+      name: "Beach Day",
+      hintergrund: (ctx, w, h) => {
+        farbverlauf([pastell.himmelblau, "#F2FAFF"])(ctx, w, h);
+        ctx.fillStyle = pastell.vanille; // Sand
+        ctx.fillRect(0, h * 0.72, w, h * 0.28);
+        linie(ctx, 0, h * 0.72, w, h * 0.72, pastell.pfirsich, 3);
+      },
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        emojiMalen(ctx, "☀️", w * 0.8, h * 0.12, s * 0.18);
+        schreiben(ctx, w, "Beach Day", w / 2, h * 0.35, s * 0.14, "Pacifico");
+        emojiMalen(ctx, "🏐", w / 2, h * 0.58, s * 0.16);
+        emojiMalen(ctx, "🌴", w * 0.15, h * 0.68, s * 0.22);
+        emojiMalen(ctx, "🐚", w * 0.75, h * 0.86, s * 0.1);
+      }
+    },
+    {
+      name: "Blumenrahmen",
+      hintergrund: einfarbig("#FFFFFF"),
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        [[0.1, 0.07], [0.9, 0.07], [0.1, 0.93], [0.9, 0.93]]
+          .forEach(([x, y]) => emojiMalen(ctx, "🌿", w * x, h * y, s * 0.16));
+        ["🌸", "🍃", "🌼"].forEach((emoji, i) => {
+          const x = w * (0.32 + i * 0.18);
+          emojiMalen(ctx, emoji, x, h * 0.05, s * 0.1);
+          emojiMalen(ctx, emoji, x, h * 0.95, s * 0.1);
+        });
+        ["🍃", "🌷", "🍃"].forEach((emoji, i) => {
+          const y = h * (0.3 + i * 0.2);
+          emojiMalen(ctx, emoji, w * 0.07, y, s * 0.1);
+          emojiMalen(ctx, emoji, w * 0.93, y, s * 0.1);
+        });
+      }
+    },
+    {
+      name: "Einladung",
+      hintergrund: (ctx, w, h) => {
+        farbverlauf([pastell.rosa, pastell.pfirsich])(ctx, w, h);
+        ausfuellZeilen(ctx, w, h, ["Wann:", "Wo:", "Was:"], 0.62);
+      },
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        emojiMalen(ctx, "🎀", w / 2, h * 0.13, s * 0.2);
+        schreiben(ctx, w, "Du bist", w / 2, h * 0.3, s * 0.1, "Fredoka");
+        schreiben(ctx, w, "eingeladen!", w / 2, h * 0.42, s * 0.13, "Pacifico");
+        emojiMalen(ctx, "✨", w * 0.18, h * 0.14, s * 0.08);
+        emojiMalen(ctx, "✨", w * 0.82, h * 0.14, s * 0.08);
+      }
+    },
+    {
+      name: "Turnier",
+      hintergrund: (ctx, w, h) => {
+        farbverlauf([pastell.lavendel, pastell.himmelblau])(ctx, w, h);
+        ausfuellZeilen(ctx, w, h, ["Datum:", "Ort:"], 0.8);
+      },
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        schreiben(ctx, w, "Volleyball", w / 2, h * 0.15, s * 0.14, "Fredoka");
+        schreiben(ctx, w, "Turnier", w / 2, h * 0.28, s * 0.14, "Pacifico");
+        emojiMalen(ctx, "🏐", w / 2, h * 0.53, s * 0.3);
+      }
+    },
+    {
+      name: "Dreamy",
+      hintergrund: farbverlauf([pastell.lavendel, pastell.rosa, pastell.pfirsich]),
+      elemente: (ctx, w, h) => {
+        const s = Math.min(w, h);
+        emojiMalen(ctx, "🌙", w * 0.75, h * 0.15, s * 0.2);
+        [[0.2, 0.12], [0.4, 0.26], [0.85, 0.36], [0.15, 0.64]]
+          .forEach(([x, y], i) => emojiMalen(ctx, i % 2 ? "⭐" : "✨", w * x, h * y, s * 0.08));
+        schreiben(ctx, w, "Dream big", w / 2, h * 0.48, s * 0.18, "Caveat");
+        emojiMalen(ctx, "☁️", w * 0.28, h * 0.82, s * 0.2);
+        emojiMalen(ctx, "☁️", w * 0.72, h * 0.88, s * 0.16);
+      }
+    }
+  ];
+
+  let aktuellerHintergrund = hintergruende[0].malen;
+
+  // Malt den aktuellen Hintergrund auf die untere Ebene
+  function hintergrundMalen() {
+    hgPinsel.clearRect(0, 0, breite, hoehe);
+    aktuellerHintergrund(hgPinsel, breite, hoehe);
+  }
+
+  // Das Gedächtnis für "Rückgängig": eine Liste von Fotos des Blatts
+  const verlauf = [];
+
+  // Macht ein "Foto" vom Blatt und legt es ins Gedächtnis
+  function merken() {
+    // Wir merken uns die Zeichnung UND welcher Hintergrund gerade da ist
+    verlauf.push({
+      bild: pinsel.getImageData(0, 0, canvas.width, canvas.height),
+      hintergrund: aktuellerHintergrund
+    });
+    // Nur die letzten 30 Fotos behalten, sonst wird das Handy langsam
+    if (verlauf.length > 30) verlauf.shift();
+  }
+
+  // ===== 2. Blatt auf die richtige Grösse bringen =====
+  // Handys haben sehr feine Bildschirme. Damit die Linien scharf sind,
+  // machen wir das Blatt intern grösser (mal "pixelDichte").
+  function blattAnpassen() {
+    const pixelDichte = window.devicePixelRatio || 1;
+    const groesse = canvas.getBoundingClientRect();
+    const neueBreite = Math.round(groesse.width * pixelDichte);
+    const neueHoehe = Math.round(groesse.height * pixelDichte);
+    // Noch unsichtbar oder gleich gross? Dann gibt es nichts zu tun
+    if (neueBreite === 0 || neueHoehe === 0) return;
+    if (neueBreite === canvas.width && neueHoehe === canvas.height) return;
+
+    // Die Zeichnung kurz zur Seite legen, damit sie nicht verloren geht
+    let alteZeichnung = null;
+    if (canvas.width > 0 && canvas.height > 0) {
+      alteZeichnung = document.createElement("canvas");
+      alteZeichnung.width = canvas.width;
+      alteZeichnung.height = canvas.height;
+      alteZeichnung.getContext("2d").drawImage(canvas, 0, 0);
+    }
+
+    canvas.width = neueBreite;
+    canvas.height = neueHoehe;
+    pinsel.scale(pixelDichte, pixelDichte);
+    if (alteZeichnung) {
+      pinsel.drawImage(alteZeichnung, 0, 0, alteZeichnung.width / pixelDichte, alteZeichnung.height / pixelDichte);
+    }
+    breite = groesse.width;
+    hoehe = groesse.height;
+
+    // Die Hintergrund-Ebene bekommt dieselbe Grösse
+    hgCanvas.width = canvas.width;
+    hgCanvas.height = canvas.height;
+    hgPinsel.scale(pixelDichte, pixelDichte);
+    hintergrundMalen();
+
+    // So sieht der Strich aus
+    pinsel.strokeStyle = aktuelleFarbe;
+    pinsel.lineWidth = aktuelleDicke;
+    pinsel.lineCap = "round";   // runde Enden
+    pinsel.lineJoin = "round";  // runde Ecken
+
+    // Radierer: "destination-out" heisst, der Strich macht Farbe weg statt dazu
+    pinsel.globalCompositeOperation = radiertGerade ? "destination-out" : "source-over";
+
+    // Alte Fotos passen nicht mehr zur neuen Grösse
+    verlauf.length = 0;
+  }
+  blattAnpassen();
+
+  // ===== 3. Zeichnen mit dem Finger (oder der Maus) =====
+  let zeichneGerade = false;
+
+  // Rechnet aus, wo genau auf dem Blatt der Finger ist
+  function position(ereignis) {
+    const groesse = canvas.getBoundingClientRect();
+    return {
+      x: ereignis.clientX - groesse.left,
+      y: ereignis.clientY - groesse.top
+    };
+  }
+
+  // Finger berührt das Blatt: neue Linie beginnen
+  canvas.addEventListener("pointerdown", (ereignis) => {
+    // Im Text-Modus schreiben wir statt zu zeichnen
+    if (textModus) {
+      textSchreiben(position(ereignis));
+      return;
+    }
+    // Im Sticker-Modus kleben wir einen Sticker hin
+    if (stickerModus) {
+      stickerKleben(position(ereignis));
+      return;
+    }
+    zeichneGerade = true;
+    canvas.setPointerCapture(ereignis.pointerId);
+    merken(); // Foto machen, bevor die neue Linie dazukommt
+    const p = position(ereignis);
+    pinsel.beginPath();
+    pinsel.moveTo(p.x, p.y);
+    pinsel.lineTo(p.x, p.y); // damit auch ein einzelner Tupfer sichtbar ist
+    pinsel.stroke();
+  });
+
+  // Finger bewegt sich: Linie weiterzeichnen
+  canvas.addEventListener("pointermove", (ereignis) => {
+    if (!zeichneGerade) return;
+    const p = position(ereignis);
+    pinsel.lineTo(p.x, p.y);
+    pinsel.stroke();
+  });
+
+  // Finger hebt ab: Linie fertig
+  function aufhoeren() { zeichneGerade = false; }
+  canvas.addEventListener("pointerup", aufhoeren);
+  canvas.addEventListener("pointercancel", aufhoeren);
+
+  // ===== 4. Farbtöpfchen =====
+  // Für jede Farbe in der Liste machen wir einen runden Knopf
+  const farbenReihe = document.getElementById("farben");
+
+  farben.forEach((farbe, nummer) => {
+    const knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.className = "farbe";
+    if (nummer === 0) knopf.classList.add("aktiv");
+    knopf.style.background = farbe.wert;
+    knopf.dataset.wert = farbe.wert;
+    knopf.setAttribute("aria-label", farbe.name);
+
+    knopf.addEventListener("click", () => {
+      aktuelleFarbe = farbe.wert;
+      pinsel.strokeStyle = aktuelleFarbe;
+      radiererAus(); // wer eine Farbe wählt, will wieder malen
+      // Den Ring vom alten Töpfchen weg, zum neuen hin
+      farbenReihe.querySelector(".aktiv")?.classList.remove("aktiv");
+      knopf.classList.add("aktiv");
+    });
+
+    farbenReihe.appendChild(knopf);
+  });
+
+  // ===== 5. Pinseldicke =====
+  document.querySelectorAll(".dicke").forEach((knopf) => {
+    knopf.addEventListener("click", () => {
+      aktuelleDicke = Number(knopf.dataset.dicke);
+      pinsel.lineWidth = aktuelleDicke;
+      document.querySelector(".dicke.aktiv").classList.remove("aktiv");
+      knopf.classList.add("aktiv");
+    });
+  });
+
+  // ===== 6. Radierer =====
+  const radiererKnopf = document.getElementById("radierer");
+
+  function radiererAus() {
+    if (!radiertGerade) return;
+    radiertGerade = false;
+    pinsel.globalCompositeOperation = "source-over";
+    radiererKnopf.classList.remove("aktiv");
+    // Den Ring wieder um die zuletzt gewählte Farbe legen
+    farbenReihe.querySelector(`[data-wert="${aktuelleFarbe}"]`).classList.add("aktiv");
+  }
+
+  radiererKnopf.addEventListener("click", () => {
+    textAus();
+    stickerAus();
+    radiertGerade = true;
+    pinsel.globalCompositeOperation = "destination-out";
+    farbenReihe.querySelector(".aktiv")?.classList.remove("aktiv");
+    radiererKnopf.classList.add("aktiv");
+  });
+
+  // ===== 7. Text =====
+  const textKnopf = document.getElementById("text");
+  const textPanel = document.getElementById("textpanel");
+  const textEingabe = document.getElementById("text-eingabe");
+
+  function textAn() {
+    radiererAus();
+    stickerAus();
+    vorlagenAus();
+    speichernAus();
+    galerieAus();
+    textModus = true;
+    textKnopf.classList.add("aktiv");
+    textPanel.hidden = false;
+    textEingabe.focus();
+  }
+
+  function textAus() {
+    textModus = false;
+    textKnopf.classList.remove("aktiv");
+    textPanel.hidden = true;
+  }
+
+  // Ein Tipp auf 🔤 schaltet das Text-Werkzeug an oder aus
+  textKnopf.addEventListener("click", () => {
+    if (textModus) textAus();
+    else textAn();
+  });
+
+  // Schrift auswählen
+  document.querySelectorAll(".schrift").forEach((knopf) => {
+    knopf.addEventListener("click", () => {
+      aktuelleSchrift = knopf.dataset.schrift;
+      document.querySelector(".schrift.aktiv").classList.remove("aktiv");
+      knopf.classList.add("aktiv");
+    });
+  });
+
+  // Schreibt den Text an die Stelle, wo der Finger das Blatt berührt hat
+  async function textSchreiben(p) {
+    const text = textEingabe.value.trim();
+    if (!text) {
+      textEingabe.focus(); // noch kein Text? Dann zuerst etwas eintippen
+      return;
+    }
+
+    // Die Pinseldicke bestimmt, wie gross die Schrift wird
+    const schriftGroesse = { 3: 22, 8: 34, 18: 54 }[aktuelleDicke];
+    const font = `${schriftGroesse}px "${aktuelleSchrift}"`;
+
+    // Warten, bis die Schrift aus dem Internet geladen ist
+    try { await document.fonts.load(font); } catch (fehler) {}
+
+    merken(); // damit man den Text rückgängig machen kann
+    pinsel.font = font;
+    pinsel.fillStyle = aktuelleFarbe;
+    pinsel.textAlign = "center";
+    pinsel.textBaseline = "middle";
+    pinsel.fillText(text, p.x, p.y);
+  }
+
+  // ===== 8. Sticker =====
+  const stickerKnopf = document.getElementById("sticker");
+  const stickerPanel = document.getElementById("stickerpanel");
+  const stickerRaster = document.getElementById("sticker-raster");
+
+  // Für jeden Sticker in der Liste einen Knopf ins Raster legen
+  sticker.forEach((emoji, nummer) => {
+    const knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.className = "sticker";
+    if (nummer === 0) knopf.classList.add("aktiv");
+    knopf.textContent = emoji;
+
+    knopf.addEventListener("click", () => {
+      aktuellerSticker = emoji;
+      stickerRaster.querySelector(".aktiv").classList.remove("aktiv");
+      knopf.classList.add("aktiv");
+    });
+
+    stickerRaster.appendChild(knopf);
+  });
+
+  function stickerAn() {
+    radiererAus();
+    textAus();
+    vorlagenAus();
+    speichernAus();
+    galerieAus();
+    stickerModus = true;
+    stickerKnopf.classList.add("aktiv");
+    stickerPanel.hidden = false;
+  }
+
+  function stickerAus() {
+    stickerModus = false;
+    stickerKnopf.classList.remove("aktiv");
+    stickerPanel.hidden = true;
+  }
+
+  stickerKnopf.addEventListener("click", () => {
+    if (stickerModus) stickerAus();
+    else stickerAn();
+  });
+
+  // Klebt den gewählten Sticker an die Stelle, wo der Finger das Blatt berührt hat
+  function stickerKleben(p) {
+    // Die Pinseldicke bestimmt, wie gross der Sticker wird
+    const stickerGroesse = { 3: 32, 8: 56, 18: 96 }[aktuelleDicke];
+
+    merken(); // damit man den Sticker rückgängig machen kann
+    pinsel.font = `${stickerGroesse}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+    pinsel.textAlign = "center";
+    pinsel.textBaseline = "middle";
+    pinsel.fillText(aktuellerSticker, p.x, p.y);
+  }
+
+  // ===== 9. Vorlagen und Hintergründe =====
+  const vorlagenKnopf = document.getElementById("vorlagen");
+  const vorlagenPanel = document.getElementById("vorlagenpanel");
+
+  function vorlagenAus() {
+    vorlagenPanel.hidden = true;
+    vorlagenKnopf.classList.remove("aktiv");
+  }
+
+  // Ein Tipp auf "Vorlagen" öffnet oder schliesst das Fenster
+  vorlagenKnopf.addEventListener("click", () => {
+    if (!vorlagenPanel.hidden) {
+      vorlagenAus();
+      return;
+    }
+    textAus();
+    stickerAus();
+    speichernAus();
+    galerieAus();
+    vorlagenPanel.hidden = false;
+    vorlagenKnopf.classList.add("aktiv");
+  });
+
+  // Wartet, bis alle drei Schriften aus dem Internet geladen sind
+  function schriftenLaden() {
+    return Promise.all(
+      ["Fredoka", "Caveat", "Pacifico"].map((schrift) => document.fonts.load(`40px "${schrift}"`))
+    ).catch(() => {});
+  }
+
+  // Malt ein kleines Vorschaubild (60 × 80) für eine Kachel
+  function vorschau(...malFunktionen) {
+    const pixelDichte = window.devicePixelRatio || 1;
+    const bild = document.createElement("canvas");
+    bild.width = 60 * pixelDichte;
+    bild.height = 80 * pixelDichte;
+    const ctx = bild.getContext("2d");
+    ctx.scale(pixelDichte, pixelDichte);
+    malFunktionen.forEach((malen) => { if (malen) malen(ctx, 60, 80); });
+    return bild;
+  }
+
+  function kachelMachen(name, bild, beimTippen) {
+    const knopf = document.createElement("button");
+    knopf.type = "button";
+    knopf.className = "kachel";
+    const beschriftung = document.createElement("span");
+    beschriftung.textContent = name;
+    knopf.append(bild, beschriftung);
+    knopf.addEventListener("click", beimTippen);
+    return knopf;
+  }
+
+  // Vorlage: neuer Hintergrund UND neue Elemente auf einem leeren Blatt
+  function vorlageAnwenden(vorlage) {
+    radiererAus();
+    merken(); // damit man die Vorlage rückgängig machen kann
+    aktuellerHintergrund = vorlage.hintergrund;
+    hintergrundMalen();
+    pinsel.clearRect(0, 0, canvas.width, canvas.height);
+    if (vorlage.elemente) vorlage.elemente(pinsel, breite, hoehe);
+    vorlagenAus();
+  }
+
+  // Hintergrund: nur der Hintergrund wechselt, deine Zeichnung bleibt
+  function hintergrundWaehlen(hg) {
+    merken();
+    aktuellerHintergrund = hg.malen;
+    hintergrundMalen();
+    vorlagenAus();
+  }
+
+  // Die Kacheln erst bauen, wenn die Schriften da sind,
+  // sonst sehen die Vorschaubilder falsch aus
+  schriftenLaden().then(() => {
+    const vorlagenRaster = document.getElementById("vorlagen-raster");
+    vorlagen.forEach((vorlage) => {
+      const bild = vorschau(vorlage.hintergrund, vorlage.elemente);
+      vorlagenRaster.appendChild(kachelMachen(vorlage.name, bild, () => vorlageAnwenden(vorlage)));
+    });
+
+    const hintergrundRaster = document.getElementById("hintergrund-raster");
+    hintergruende.forEach((hg) => {
+      const bild = vorschau(hg.malen);
+      hintergrundRaster.appendChild(kachelMachen(hg.name, bild, () => hintergrundWaehlen(hg)));
+    });
+  });
+
+  // ===== 10. Rückgängig =====
+  document.getElementById("zurueck").addEventListener("click", () => {
+    const letztesFoto = verlauf.pop(); // das neuste Foto herausnehmen
+    if (!letztesFoto) return;
+    pinsel.putImageData(letztesFoto.bild, 0, 0);
+    // Falls sich der Hintergrund geändert hat, den alten zurückholen
+    if (letztesFoto.hintergrund !== aktuellerHintergrund) {
+      aktuellerHintergrund = letztesFoto.hintergrund;
+      hintergrundMalen();
+    }
+  });
+
+  // ===== 11. Knopf "Neues Blatt" =====
+  document.getElementById("neu").addEventListener("click", () => {
+    merken(); // so kann man auch "Neu" rückgängig machen
+    pinsel.clearRect(0, 0, canvas.width, canvas.height);
+    aktuellerHintergrund = hintergruende[0].malen; // wieder weiss
+    hintergrundMalen();
+  });
+
+  // ===== 12. Speichern =====
+  const speichernKnopf = document.getElementById("speichern");
+  const speicherPanel = document.getElementById("speicherpanel");
+  const fertigesBild = document.getElementById("fertiges-bild");
+  const speicherInfo = document.getElementById("speicher-info");
+  const aufsHandyKnopf = document.getElementById("aufs-handy");
+  let ganzesBild = null;
+
+  // Legt Hintergrund und Zeichnung zu EINEM Bild zusammen
+  function bildZusammenlegen() {
+    const bild = document.createElement("canvas");
+    bild.width = canvas.width;
+    bild.height = canvas.height;
+    const ctx = bild.getContext("2d");
+    ctx.drawImage(hgCanvas, 0, 0); // zuerst der Hintergrund
+    ctx.drawImage(canvas, 0, 0);   // dann deine Zeichnung darüber
+    return bild;
+  }
+
+  function speichernAus() {
+    speicherPanel.hidden = true;
+    speichernKnopf.classList.remove("aktiv");
+  }
+
+  speichernKnopf.addEventListener("click", () => {
+    if (!speicherPanel.hidden) {
+      speichernAus();
+      return;
+    }
+    textAus();
+    stickerAus();
+    vorlagenAus();
+    galerieAus();
+    ganzesBild = bildZusammenlegen();
+    fertigesBild.src = ganzesBild.toDataURL("image/png");
+    speicherInfo.textContent = "";
+    inGalerieKnopf.disabled = false;
+    speicherPanel.hidden = false;
+    speichernKnopf.classList.add("aktiv");
+  });
+
+  document.getElementById("weiter-malen").addEventListener("click", speichernAus);
+
+  // Auf dem Handy öffnet sich das Teilen-Menü (Fotos, WhatsApp, AirDrop …),
+  // auf dem Computer wird das Bild heruntergeladen.
+  aufsHandyKnopf.addEventListener("click", async () => {
+    if (!ganzesBild) return;
+    const blob = await new Promise((fertig) => ganzesBild.toBlob(fertig, "image/png"));
+    const datum = new Date().toISOString().slice(0, 10);
+    const datei = new File([blob], `DreamyDraw-${datum}.png`, { type: "image/png" });
+
+    if (navigator.canShare && navigator.canShare({ files: [datei] })) {
+      try {
+        await navigator.share({ files: [datei] });
+        speicherInfo.textContent = "Geteilt! 🎉";
+      } catch (fehler) {
+        // "AbortError" heisst: du hast das Teilen-Menü selbst geschlossen
+        if (fehler.name !== "AbortError") {
+          speicherInfo.textContent = "Das hat nicht geklappt. Drück lange aufs Bild!";
+        }
+      }
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(datei);
+    link.download = datei.name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    speicherInfo.textContent = "Gespeichert! 🎉";
+  });
+
+  // ===== 13. Galerie: der Speicher IN der App =====
+  // Die Karten liegen in einer kleinen Datenbank IM Browser deines Handys
+  // (sie heisst IndexedDB). Dafür braucht es kein Konto. Aber: Die Karten
+  // sind nur auf diesem einen Gerät gespeichert.
+  const galerieKnopf = document.getElementById("galerie");
+  const galeriePanel = document.getElementById("galeriepanel");
+  const galerieInfo = document.getElementById("galerie-info");
+  const galerieRaster = document.getElementById("galerie-raster");
+  const galerieDetail = document.getElementById("galerie-detail");
+  const galerieBild = document.getElementById("galerie-bild");
+  const inGalerieKnopf = document.getElementById("in-galerie");
+  const loeschenKnopf = document.getElementById("galerie-loeschen");
+  let karten = [];          // alle gespeicherten Karten
+  let offeneKarte = null;   // die Karte, die gerade gross angezeigt wird
+  let wirklichLoeschen = false;
+  let bildAdressen = [];    // Adressen der Vorschaubilder, zum Aufräumen
+
+  // Die Datenbank öffnen (beim allerersten Mal wird sie angelegt)
+  const datenbank = new Promise((fertig, fehler) => {
+    const anfrage = indexedDB.open("dreamydraw", 1);
+    anfrage.onupgradeneeded = () => {
+      anfrage.result.createObjectStore("karten", { keyPath: "id", autoIncrement: true });
+      anfrage.result.createObjectStore("einstellungen");
+    };
+    anfrage.onsuccess = () => fertig(anfrage.result);
+    anfrage.onerror = () => fehler(anfrage.error);
+  });
+
+  // Macht eine Arbeit in einem Speicher ("karten" oder "einstellungen")
+  async function mitSpeicher(name, modus, arbeit) {
+    const dbx = await datenbank;
+    return new Promise((fertig, fehler) => {
+      const vorgang = dbx.transaction(name, modus);
+      const anfrage = arbeit(vorgang.objectStore(name));
+      vorgang.oncomplete = () => fertig(anfrage.result);
+      vorgang.onerror = () => fehler(vorgang.error);
+      vorgang.onabort = () => fehler(vorgang.error);
+    });
+  }
+
+  // Den Browser bitten, die Karten nicht von selbst aufzuräumen
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(() => {});
+  }
+
+  function galerieAus() {
+    galeriePanel.hidden = true;
+    galerieKnopf.classList.remove("aktiv");
+    detailZu();
+  }
+
+  galerieKnopf.addEventListener("click", () => {
+    if (!galeriePanel.hidden) {
+      galerieAus();
+      return;
+    }
+    textAus();
+    stickerAus();
+    vorlagenAus();
+    speichernAus();
+    galeriePanel.hidden = false;
+    galerieKnopf.classList.add("aktiv");
+  });
+
+  async function galerieLaden() {
+    try {
+      karten = await mitSpeicher("karten", "readonly", (speicher) => speicher.getAll());
+      karten.sort((a, b) => b.erstellt - a.erstellt); // die neuste zuerst
+      galerieZeigen();
+    } catch (fehler) {
+      galerieInfo.textContent = "Die Galerie funktioniert in diesem Browser leider nicht.";
+    }
+  }
+
+  // Baut für jede Karte ein kleines Bild ins Raster
+  function galerieZeigen() {
+    bildAdressen.forEach((adresse) => URL.revokeObjectURL(adresse));
+    bildAdressen = karten.map((karte) => URL.createObjectURL(karte.bild));
+    galerieRaster.replaceChildren();
+
+    if (karten.length === 0) {
+      galerieInfo.textContent = "Noch keine Karten. Tippe auf 💾 und dann auf «In meine Galerie».";
+    } else {
+      galerieInfo.textContent = karten.length === 1 ? "1 Karte" : `${karten.length} Karten`;
+    }
+
+    karten.forEach((karte, nummer) => {
+      const knopf = document.createElement("button");
+      knopf.type = "button";
+      knopf.className = "galerie-kachel";
+      knopf.setAttribute("aria-label", "Karte öffnen");
+      const bild = document.createElement("img");
+      bild.src = bildAdressen[nummer];
+      bild.alt = "";
+      knopf.appendChild(bild);
+      knopf.addEventListener("click", () => detailAuf(karte, bildAdressen[nummer]));
+      galerieRaster.appendChild(knopf);
+    });
+  }
+
+  // Eine Karte gross anzeigen
+  function detailAuf(karte, adresse) {
+    offeneKarte = karte;
+    galerieBild.src = adresse;
+    wirklichLoeschen = false;
+    loeschenKnopf.textContent = "🗑️ Löschen";
+    galerieRaster.hidden = true;
+    galerieInfo.hidden = true;
+    galerieDetail.hidden = false;
+  }
+
+  function detailZu() {
+    offeneKarte = null;
+    galerieDetail.hidden = true;
+    galerieRaster.hidden = false;
+    galerieInfo.hidden = false;
+  }
+
+  document.getElementById("galerie-zurueck").addEventListener("click", detailZu);
+
+  // Eine gespeicherte Karte wieder aufs Blatt holen
+  document.getElementById("galerie-bearbeiten").addEventListener("click", () => {
+    if (!offeneKarte) return;
+    const bild = new Image();
+    bild.onload = () => {
+      radiererAus();
+      merken(); // damit man es rückgängig machen kann
+      aktuellerHintergrund = hintergruende[0].malen;
+      hintergrundMalen();
+      pinsel.clearRect(0, 0, canvas.width, canvas.height);
+      pinsel.drawImage(bild, 0, 0, breite, hoehe);
+      URL.revokeObjectURL(bild.src);
+      galerieAus();
+    };
+    bild.src = URL.createObjectURL(offeneKarte.bild);
+  });
+
+  // Löschen: beim ersten Tippen nachfragen, beim zweiten wirklich löschen
+  loeschenKnopf.addEventListener("click", async () => {
+    if (!offeneKarte) return;
+    if (!wirklichLoeschen) {
+      wirklichLoeschen = true;
+      loeschenKnopf.textContent = "🗑️ Wirklich löschen?";
+      return;
+    }
+    const karte = offeneKarte;
+    detailZu();
+    try {
+      await mitSpeicher("karten", "readwrite", (speicher) => speicher.delete(karte.id));
+      await galerieLaden();
+    } catch (fehler) {
+      galerieInfo.textContent = "Löschen hat nicht geklappt. Versuch es nochmals.";
+    }
+  });
+
+  // Die fertige Karte in die Galerie legen
+  inGalerieKnopf.addEventListener("click", async () => {
+    if (!ganzesBild) return;
+    inGalerieKnopf.disabled = true; // nicht aus Versehen zweimal speichern
+    speicherInfo.textContent = "Wird gespeichert …";
+    try {
+      const datei = await new Promise((fertig) => ganzesBild.toBlob(fertig, "image/png"));
+      await mitSpeicher("karten", "readwrite", (speicher) =>
+        speicher.add({ bild: datei, erstellt: Date.now() })
+      );
+      await galerieLaden();
+      speicherInfo.textContent = "In deiner Galerie gespeichert! 🎉 Du findest sie oben unter 📚.";
+    } catch (fehler) {
+      inGalerieKnopf.disabled = false;
+      if (fehler && fehler.name === "QuotaExceededError") {
+        speicherInfo.textContent = "Der Speicher ist voll. Lösch ein paar alte Karten.";
+      } else {
+        speicherInfo.textContent = "Speichern hat nicht geklappt. Versuch es nochmals.";
+      }
+    }
+  });
+
+  // ===== 14. Dein eigenes Logo =====
+  // Jede Karte aus der Galerie kann das Logo oben links werden.
+  // Das Bild wird unter "einstellungen" gespeichert.
+  const logoBox = document.getElementById("logo");
+  const wolkenLogo = logoBox.innerHTML; // das gezeichnete Wölkchen merken
+  const logoZuruecksetzenKnopf = document.getElementById("logo-zuruecksetzen");
+  let logoAdresse = null;
+
+  function logoZeigen(bildDatei) {
+    if (logoAdresse) URL.revokeObjectURL(logoAdresse);
+    logoAdresse = null;
+    logoZuruecksetzenKnopf.hidden = !bildDatei;
+    if (!bildDatei) {
+      logoBox.innerHTML = wolkenLogo;
+      return;
+    }
+    logoAdresse = URL.createObjectURL(bildDatei);
+    const bild = document.createElement("img");
+    bild.src = logoAdresse;
+    bild.alt = "Logo";
+    logoBox.replaceChildren(bild);
+  }
+
+  document.getElementById("als-logo").addEventListener("click", async () => {
+    if (!offeneKarte) return;
+    const bildDatei = offeneKarte.bild;
+    detailZu();
+    try {
+      await mitSpeicher("einstellungen", "readwrite", (speicher) => speicher.put(bildDatei, "logo"));
+      logoZeigen(bildDatei);
+      galerieInfo.textContent = "Das ist jetzt dein Logo! ⭐ Schau oben links.";
+    } catch (fehler) {
+      galerieInfo.textContent = "Das hat nicht geklappt. Versuch es nochmals.";
+    }
+  });
+
+  logoZuruecksetzenKnopf.addEventListener("click", async () => {
+    try {
+      await mitSpeicher("einstellungen", "readwrite", (speicher) => speicher.delete("logo"));
+      logoZeigen(null);
+    } catch (fehler) {
+      galerieInfo.textContent = "Das hat nicht geklappt. Versuch es nochmals.";
+    }
+  });
+
+  // ===== 15. Beim Start =====
+  // Wenn das Blatt seine Grösse ändert (z.B. Handy gedreht), neu anpassen.
+  // Deine Zeichnung bleibt dabei erhalten.
+  new ResizeObserver(blattAnpassen).observe(canvas);
+
+  galerieLaden();
+  mitSpeicher("einstellungen", "readonly", (speicher) => speicher.get("logo"))
+    .then((bildDatei) => logoZeigen(bildDatei || null))
+    .catch(() => {});
+
+  // Damit die App auch ohne Internet startet (z.B. auf der Piste 🏂)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+</script>
+</body>
+</html>
